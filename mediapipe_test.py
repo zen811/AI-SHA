@@ -23,9 +23,10 @@ options = HolisticLandmarkerOptions(
 cap = cv.VideoCapture(0)
 ret, frame = cap.read()
 height, width, channels = frame.shape
-end_pt=None
+
 
 def draw_landmarks_group(frame, landmarks_list):
+    end_pt=None
     if landmarks_list:
         for landmark in landmarks_list:
             x = int(landmark.x * frame.shape[1])            # Convert normalized relative coordinates to absolute pixel values
