@@ -8,11 +8,11 @@ HolisticLandmarker = mp.tasks.vision.HolisticLandmarker
 HolisticLandmarkerOptions = mp.tasks.vision.HolisticLandmarkerOptions
 VisionRunningMode = mp.tasks.vision.RunningMode
 
-model_path = './AI-SHA/holistic_landmarker.task'        #the actual model which does the landmarking
+model_path = './holistic_landmarker.task'        #the actual model which does the landmarking
 
 
 options = HolisticLandmarkerOptions(
-    base_options=BaseOptions(model_asset_path='./AI-SHA/holistic_landmarker.task'),
+    base_options=BaseOptions(model_asset_path=model_path),
     running_mode=VisionRunningMode.VIDEO,
     min_face_detection_confidence = 0.5,
     min_pose_detection_confidence=0.5,
@@ -27,6 +27,7 @@ def draw_landmarks_group(frame, landmarks_list):
         for landmark in landmarks_list:
             x = int(landmark.x * frame.shape[1])            # Convert normalized relative coordinates to absolute pixel values
             y = int(landmark.y * frame.shape[0])
+            print(x,y);
             cv.circle(frame, (x, y), 3, (0, 255, 0), -1)            #Draw a tracking node dot
 
 with HolisticLandmarker.create_from_options(options) as landmarker:
