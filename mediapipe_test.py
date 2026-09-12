@@ -52,7 +52,7 @@ with HolisticLandmarker.create_from_options(options) as landmarker:
             
             draw_landmarks_group(frame, landmarker_result.pose_landmarks)            # Draw Pose skeletal target tracks
             
-            draw_landmarks_group(frame, landmarker_result.face_landmarks)             # Draw Face structure map
+            #draw_landmarks_group(frame, landmarker_result.face_landmarks)             # Draw Face structure map
         cv.imshow('MediaPipe Tasks Tracking', frame)
 
         if cv.waitKey(1) & 0xFF == ord('q'):
