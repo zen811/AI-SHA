@@ -27,8 +27,9 @@ def draw_landmarks_group(frame, landmarks_list):
         for landmark in landmarks_list:
             x = int(landmark.x * frame.shape[1])            # Convert normalized relative coordinates to absolute pixel values
             y = int(landmark.y * frame.shape[0])
-            text=str(round(landmark.x))+","+str(round(landmark.y))+","+str(round(landmark.z)) 
-            cv.putText(frame,text,(x,y),cv.FONT_HERSHEY_SIMPLEX,1,(0, 255, 0),2)
+            landmark_coordinates=[landmark.x,landmark.y,landmark.z]
+            text=[round(_,3) for _ in landmark_coordinates]
+            cv.putText(frame,str(text),(x,y),cv.FONT_HERSHEY_SIMPLEX,0.5,(0, 255, 0),2)
             cv.circle(frame, (x, y), 3, (0, 255, 0), -1)            #Draw a tracking node dot
 
 with HolisticLandmarker.create_from_options(options) as landmarker:
