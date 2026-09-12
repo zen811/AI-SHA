@@ -15,7 +15,13 @@ def vid_cam():#for a contineous live stream
         cv.waitKey(1)
 
 def img_cam():#for single frames one by one until you quit
-    ret-True
+    ret=True
     while ret: 
         ret,frame=cap.read()
         return frame
+def op_image():
+    ret,frame=cap.read()
+    cv.imwrite("./AI-SHA/Picture.png",frame)
+
+
+vid_cam()
