@@ -1,12 +1,18 @@
-import mediapipe as mp
-import cv2 as cv
 import time
+import cv2 as cv
+import mediapipe as mp
+from mediapipe.tasks.python import vision
+from mediapipe.tasks.python import vision
+from mediapipe.tasks.python.vision import drawing_utils
+
 
 
 BaseOptions = mp.tasks.BaseOptions
 HolisticLandmarker = mp.tasks.vision.HolisticLandmarker
 HolisticLandmarkerOptions = mp.tasks.vision.HolisticLandmarkerOptions
 VisionRunningMode = mp.tasks.vision.RunningMode
+POSE_GRAPH = vision.PoseLandmarksConnections.POSE_LANDMARKS
+HAND_GRAPH = vision.HandLandmarksConnections.HAND_CONNECTIONS
 
 model_path = './holistic_landmarker.task'        #the actual model which does the landmarking
 
@@ -34,11 +40,12 @@ def draw_landmarks_group(frame, landmarks_list):
             start_pt = (x, y)
             landmark_coordinates=[landmark.x,landmark.y,landmark.z]
             text=[round(_,3) for _ in landmark_coordinates]
-            cv.putText(frame,str(text),(x,y),cv.FONT_HERSHEY_SIMPLEX,0.5,(0, 255, 0),2)
+            cv.putText(frame,str(text),(x,y),cv.FONT_HERSHEY_SIMPLEX,0.25,(0, 255, 0),2)
             cv.circle(frame, (x, y), 3, (0, 255, 0), -1)      #Draw a tracking node dot
-            if end_pt is not None:
-                cv.line(frame, end_pt, start_pt, (255, 0, 0), 2)  # Draws line from previous pt to current pt
-            end_pt=start_pt
+            drawing_utils.draw_landmarks(frame, landmarker_result.pose_landmarks, POSE_GRAPH)
+            drawing_utils.draw_landmarks(frame,landmarker_result.left_hand_landmarks,HAND_GRAPH)
+            drawing_utils.draw_landmarks(frame,landmarker_result.right_hand_landmarks,HAND_GRAPH)
+
 
 
 with HolisticLandmarker.create_from_options(options) as landmarker:
