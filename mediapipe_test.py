@@ -23,26 +23,22 @@ options = HolisticLandmarkerOptions(
 cap = cv.VideoCapture(0)
 ret, frame = cap.read()
 height, width, channels = frame.shape
-end_pt=(0,0)
+end_pt=None
 
 def draw_landmarks_group(frame, landmarks_list):
     if landmarks_list:
         for landmark in landmarks_list:
             x = int(landmark.x * frame.shape[1])            # Convert normalized relative coordinates to absolute pixel values
             y = int(landmark.y * frame.shape[0])
-
+            start_pt = (x, y)
             landmark_coordinates=[landmark.x,landmark.y,landmark.z]
             text=[round(_,3) for _ in landmark_coordinates]
             cv.putText(frame,str(text),(x,y),cv.FONT_HERSHEY_SIMPLEX,0.5,(0, 255, 0),2)
             cv.circle(frame, (x, y), 3, (0, 255, 0), -1)      #Draw a tracking node dot
-            start_idx = landmark.start
-            end_idx = landmark.end
-    
-            prev_lm = landmarks_list[start_idx] 
-            start_point = (int(prev_lm.x * width), int(prev_lm.y * height))
-            curr_lm = landmarks_list[end_idx]
-            end_point = (int(curr_lm.x * width), int(curr_lm.y * height))  
-            cv.line(frame, start_point, end_point, (255, 0, 0), 2)      
+            if end_pt is not None:
+                cv.line(frame, end_pt, start_pt, (255, 0, 0), 2)  # Draws line from previous pt to current pt
+            end_pt=start_pt
+
 
 with HolisticLandmarker.create_from_options(options) as landmarker:
     while True:
