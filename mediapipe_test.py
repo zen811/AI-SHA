@@ -1,12 +1,27 @@
+import sys
+
+def install_and_import(package):
+    try:
+        __import__(package)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+
+for pkg in ["requests", "pandas","opencv-python","mediapipe","xgboost","scikit_learn"]:
+    install_and_import(pkg) 
+    
 import time
 import pickle
 import cv2 as cv
+import subprocess
 import pandas as pd
 import mediapipe as mp
 from mediapipe.tasks.python import vision
 from mediapipe.tasks.python import vision
 from mediapipe.tasks.python.vision import drawing_utils
 
+
+for pkg in ["requests", "pandas","opencv-python","mediapipe","xgboost","scikit_learn"]:
+    install_and_import(pkg)
 
 
 BaseOptions = mp.tasks.BaseOptions
