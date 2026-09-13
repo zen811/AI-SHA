@@ -1,32 +1,77 @@
+from pathlib import Path
+import cv2 as cv
+import mediapipe as mp
 import pandas as pd
-import numpy as np
-import pickle
-with open('./AI-SHA/Gesture_model_pkl.pkl', 'rb') as file:
-    model_pack = pickle.load(file) 
 
-xgb_classifier = model_pack['model']
-scalar = model_pack['scaler']
-label_enc = model_pack['label_encoder']
+BaseOptions = mp.tasks.BaseOptions
+HolisticLandmarker = mp.tasks.vision.HolisticLandmarker
+HolisticLandmarkerOptions = mp.tasks.vision.HolisticLandmarkerOptions
+VisionRunningMode = mp.tasks.vision.RunningMode
 
-def Gesture_checker(raw_data):
-    
-    scaled_data = scalar.transform(raw_data)
-    
-    numeric_prediction = xgb_classifier.predict(scaled_data)
-    
-    text_prediction = label_enc.inverse_transform(numeric_prediction)
-    
-    return text_prediction[0]
+model_path = str(Path("./model_training/holistic_landmarker.task").resolve())
+folder_path = Path("./model_training/gestures/hello").resolve()
 
-empt=[]
-vals=[]
-for _ in range(216):
-    empt.append(_)  #replace with index of the landmark in order pose left hand right hand
-                    #add append to add x y z valus of the index
-    vals.append(np.random.rand())
+file_list = [
+    str(file.resolve())
+    for file in folder_path.iterdir()
+    if file.is_file() and file.suffix.lower() in [".jpg", ".jpeg", ".png"]
+]
 
-print(vals)
-new_engine_data = pd.DataFrame([vals],columns=empt)
-print(new_engine_data)
-result = Gesture_checker(new_engine_data)
-print(f"Predicted Engine Condition: {result}")
+options = HolisticLandmarkerOptions(
+    base_options=BaseOptions(model_asset_path=model_path),
+    running_mode=VisionRunningMode.IMAGE,
+    min_face_detection_confidence=0.5,
+    min_pose_detection_confidence=0.5,
+    min_hand_landmarks_confidence=0.5,
+)
+
+landmark_hello = []
+
+with HolisticLandmarker.create_from_options(options) as landmarker:
+  for id, file in enumerate(file_list):
+    image = cv.imread(file)
+    resized_image = cv.resize(image, (640, 480))
+    rgb_image = cv.cvtColor(resized_image, cv.COLOR_BGR2RGB)
+    mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_image)
+
+    result = landmarker.detect(mp_image)
+    landmarkdata = []
+
+    if result.pose_landmarks and len(result.pose_landmarks) > 0:      #Pose Landmarks (33 landmarks x 3 coordinates = 99 values)
+      pose_points = (                                                 #Outer index handles the pose list return wrapper
+          result.pose_landmarks[0]
+          if isinstance(result.pose_landmarks[0], list)
+          else result.pose_landmarks
+      )
+      for landmark in pose_points:
+        landmarkdata.extend([landmark.x, landmark.y, landmark.z])
+    else:
+      landmarkdata.extend([0.0] * (33 * 3))
+
+    if result.left_hand_landmarks and len(result.left_hand_landmarks) > 0: #Left Hand Landmarks (21 landmarks x 3 coordinates = 63 values)
+      left_hand_points = (
+          result.left_hand_landmarks[0]
+          if isinstance(result.left_hand_landmarks[0], list)
+          else result.left_hand_landmarks
+      )
+      for landmark in left_hand_points:
+        landmarkdata.extend([landmark.x, landmark.y, landmark.z])
+    else:
+      landmarkdata.extend([0.0] * (21 * 3))
+
+    if result.right_hand_landmarks and len(result.right_hand_landmarks) > 0:    #Right Hand Landmarks (21 landmarks x 3 coordinates = 63 values)
+      right_hand_points = (
+          result.right_hand_landmarks[0]
+          if isinstance(result.right_hand_landmarks[0], list)
+          else result.right_hand_landmarks
+      )
+      for landmark in right_hand_points:
+        landmarkdata.extend([landmark.x, landmark.y, landmark.z])
+    else:
+      landmarkdata.extend([0.0] * (21 * 3))
+
+    landmarkdata.append(0)
+    landmark_hello.append(landmarkdata)
+
+df = pd.DataFrame(landmark_hello)
+df.to_csv("Hello.csv", index=False)
