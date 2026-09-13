@@ -30,24 +30,24 @@ options = HolisticLandmarkerOptions(
 
 landmark_hello=[]
 with HolisticLandmarker.create_from_options(options) as landmarker:
-    for file in file_list:
+    for id,file in enumerate(file_list):
         mp_image = mp.Image.create_from_file(str(file))
         result = landmarker.detect(mp_image)
         landmarkdata=[]
         for idx, landmark in enumerate(result.pose_landmarks):
-            print(f"For Poses\nIndex {idx:02d} -> X: {landmark.x:.4f}, Y: {landmark.y:.4f}, Z: {landmark.z:.4f}")
+            print(f"image{id:02d} Poses\nIndex {idx:02d} -> X: {landmark.x:.4f}, Y: {landmark.y:.4f}, Z: {landmark.z:.4f}")
             landmarkdata.append(idx)
             landmarkdata.append(landmark.x)
             landmarkdata.append(landmark.y)
             landmarkdata.append(landmark.z)
         for idx,landmark in enumerate(result.left_hand_landmarks):
-            print(f"For left hand \nIndex {idx:02d} -> X: {landmark.x:.4f}, Y: {landmark.y:.4f}, Z: {landmark.z:.4f}")
+            print(f"image{id:02d} left hand \nIndex {idx:02d} -> X: {landmark.x:.4f}, Y: {landmark.y:.4f}, Z: {landmark.z:.4f}")
             landmarkdata.append(idx)
             landmarkdata.append(landmark.x)
             landmarkdata.append(landmark.y)
             landmarkdata.append(landmark.z)
         for idx,landmark in enumerate(result.right_hand_landmarks):
-            print(f"For right hand\nIndex {idx:02d} -> X: {landmark.x:.4f}, Y: {landmark.y:.4f}, Z: {landmark.z:.4f}")
+            print(f"image{id:02d} right hand\nIndex {idx:02d} -> X: {landmark.x:.4f}, Y: {landmark.y:.4f}, Z: {landmark.z:.4f}")
             landmarkdata.append(idx)
             landmarkdata.append(landmark.x)
             landmarkdata.append(landmark.y)
