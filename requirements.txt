@@ -1,0 +1,6 @@
+
+pandas
+mediapipe
+opencv-python
+xgboost
+pickle
