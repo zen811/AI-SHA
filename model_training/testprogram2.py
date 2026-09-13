@@ -45,6 +45,7 @@ with HolisticLandmarker.create_from_options(options) as landmarker:
       )
       for landmark in pose_points:
         landmarkdata.extend([landmark.x, landmark.y, landmark.z])
+        
     else:
       landmarkdata.extend([0.0] * (33 * 3))
 
