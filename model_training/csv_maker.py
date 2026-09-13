@@ -14,7 +14,7 @@ folder_path = Path("./model_training/gestures/hello")
 file_list=[]
 for file in folder_path.iterdir():
     if file.is_file():
-        file_list.append(file)
+        file_list.append(str(Path(file)))
 
 
 options = HolisticLandmarkerOptions(
