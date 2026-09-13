@@ -9,7 +9,7 @@ HolisticLandmarkerOptions = mp.tasks.vision.HolisticLandmarkerOptions
 VisionRunningMode = mp.tasks.vision.RunningMode
 
 model_path = str(Path("./model_training/holistic_landmarker.task").resolve())
-folder_path = Path("./model_training/gestures/Thank_u").resolve()
+folder_path = Path("./model_training/gestures/Sorry").resolve()
 
 file_list = [
     str(file.resolve())
@@ -71,8 +71,8 @@ with HolisticLandmarker.create_from_options(options) as landmarker:
     else:
       landmarkdata.extend([0.0] * (21 * 3))
 
-    landmarkdata.append(1)
+    landmarkdata.append(2)
     landmark_hello.append(landmarkdata)
 
 df = pd.DataFrame(landmark_hello)
-df.to_csv("./model_training/Thank_u.csv", index=False)
+df.to_csv("./model_training/Sorry.csv", index=False)
