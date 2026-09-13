@@ -9,7 +9,7 @@ import pickle
 
 
 
-df = pd.read_csv('./AI-SHA/model_training/gestures/handgestures.csv')
+df = pd.read_csv('./model_training/gestures/handgestures.csv')
 x = df.drop(df.columns[-1], axis=1)
 y = df.iloc[:, -1:]
 print(df)
@@ -45,6 +45,6 @@ model_pack = {'model': xgb_classifier,'scaler': scalar,'label_encoder': label_en
 
 
 with open('Gesture_model.pkl', 'wb') as file:
-    pickle.dump(model_pack, file)
+   pickle.dump(model_pack, file)
     
 
