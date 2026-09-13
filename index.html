@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI-SHA Real-Time Inference</title>
-  
-  <!-- MediaPipe JS Dependencies -->
+  <title>AI-SHA</title>
+
+  <!-- MediaPipe JS Libraries for Pose & Hands -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
 
   <style>
     body {
@@ -31,7 +31,7 @@
       overflow: hidden;
       box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
     }
-    /* Mirror webcam feed for natural interaction */
+    /* Mirror camera stream for intuitive interaction */
     #webcam, #output_canvas {
       position: absolute;
       top: 0;
@@ -40,12 +40,39 @@
       height: 480px;
       transform: scaleX(-1);
     }
+    /* Result Display Overlay */
+    .result-card {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 8px 24px;
+      border-radius: 30px;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .result-text {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #38bdf8;
+    }
   </style>
 </head>
 <body>
 
-  <h2>AI-SHA Web Inference</h2>
+  <h2>AI-SHA </h2>
+
   <div class="video-container">
+    <div class="result-card">
+      <span>Detected: </span>
+      <span id="detectedWord" class="result-text">Waiting...</span>
+    </div>
+
     <video id="webcam" autoplay playsinline></video>
     <canvas id="output_canvas" width="640" height="480"></canvas>
   </div>
@@ -54,51 +81,101 @@
     const videoElement = document.getElementById('webcam');
     const canvasElement = document.getElementById('output_canvas');
     const canvasCtx = canvasElement.getContext('2d');
+    const detectedWordEl = document.getElementById('detectedWord');
 
-    // 1. Process and draw keypoints/landmarks onto canvas
-    function onResults(results) {
-      canvasCtx.save();
-      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-      
-      // Draw base video frame
-      canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+    const SIGN_DICTIONARY = {
+      0: "Hello",
+      1: "Thank You",
+      2: "Bye",
+      3: "Sorry"
+    };
 
-      if (results.multiHandLandmarks) {
-        for (const landmarks of results.multiHandLandmarks) {
-          // Draw skeleton joints (connections)
-          drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {
-            color: '#00FF00',
-            lineWidth: 4
-          });
-          // Draw keypoint landmarks
-          drawLandmarks(canvasCtx, landmarks, {
-            color: '#FF0000',
-            lineWidth: 2,
-            radius: 4
-          });
-        }
-      }
-      canvasCtx.restore();
-    }
-
-    // 2. Initialize MediaPipe Hands instance
-    const hands = new Hands({
-      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    // 1. Initialize MediaPipe Holistic Pipeline
+    const holistic = new Holistic({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`
     });
 
-    hands.setOptions({
-      maxNumHands: 2,
+    holistic.setOptions({
       modelComplexity: 1,
+      smoothLandmarks: true,
       minDetectionConfidence: 0.5,
       minTrackingConfidence: 0.5
     });
 
-    hands.onResults(onResults);
+    holistic.onResults(onHolisticResults);
 
-    // 3. Bind browser webcam stream
+    // Classification function matching your target model rules
+    function classifyGesture(landmarks) {
+      const indexTip = landmarks[8];
+      const middleTip = landmarks[12];
+      const ringTip = landmarks[16];
+      const pinkyTip = landmarks[20];
+
+      const indexPip = landmarks[6];
+      const middlePip = landmarks[10];
+      const ringPip = landmarks[14];
+      const pinkyPip = landmarks[18];
+
+      const indexUp = indexTip.y < indexPip.y;
+      const middleUp = middleTip.y < middlePip.y;
+      const ringUp = ringTip.y < ringPip.y;
+      const pinkyUp = pinkyTip.y < pinkyPip.y;
+
+      let result = -1;
+
+      if (indexUp && middleUp && ringUp && pinkyUp) {
+        result = 0; // "Hello"
+      } else if (!indexUp && !middleUp && !ringUp && !pinkyUp) {
+        result = 3; // "Sorry"
+      } else if (indexUp && middleUp && !ringUp && !pinkyUp) {
+        result = 2; // "Bye"
+      } else if (indexUp && !middleUp && !ringUp && !pinkyUp) {
+        result = 1; // "Thank You"
+      }
+
+      return result in SIGN_DICTIONARY ? SIGN_DICTIONARY[result] : "Detecting...";
+    }
+
+    // 2. Process and Render Posture & Hands
+    function onHolisticResults(results) {
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+      // Render Body Posture Skeleton (excluding facial keypoints)
+      if (results.poseLandmarks) {
+        drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#00FF00', lineWidth: 4 });
+        drawLandmarks(canvasCtx, results.poseLandmarks, { color: '#FF0000', lineWidth: 2, radius: 4 });
+      }
+
+      // Render Right Hand Skeleton & Run Inference
+      let activeHand = results.rightHandLandmarks || results.leftHandLandmarks;
+
+      if (results.leftHandLandmarks) {
+        drawConnectors(canvasCtx, results.leftHandLandmarks, HAND_CONNECTIONS, { color: '#38bdf8', lineWidth: 3 });
+        drawLandmarks(canvasCtx, results.leftHandLandmarks, { color: '#f43f5e', lineWidth: 1, radius: 3 });
+      }
+
+      if (results.rightHandLandmarks) {
+        drawConnectors(canvasCtx, results.rightHandLandmarks, HAND_CONNECTIONS, { color: '#38bdf8', lineWidth: 3 });
+        drawLandmarks(canvasCtx, results.rightHandLandmarks, { color: '#f43f5e', lineWidth: 1, radius: 3 });
+      }
+
+      if (activeHand) {
+        detectedWordEl.innerText = classifyGesture(activeHand);
+      } else if (!results.poseLandmarks) {
+        detectedWordEl.innerText = "No subject detected";
+      } else {
+        detectedWordEl.innerText = "Tracking Posture...";
+      }
+
+      canvasCtx.restore();
+    }
+
+    // 3. Bind Web Camera Pipeline
     const camera = new Camera(videoElement, {
       onFrame: async () => {
-        await hands.send({ image: videoElement });
+        await holistic.send({ image: videoElement });
       },
       width: 640,
       height: 480
