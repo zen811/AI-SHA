@@ -35,15 +35,37 @@ with HolisticLandmarker.create_from_options(options) as landmarker:
         resized_image = cv.resize(image,(640,480))
         rgb_image = cv.cvtColor(resized_image,cv.COLOR_BGR2RGB)
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_image)
-
+        
         result = landmarker.detect(mp_image)
         landmarkdata=[]
-        for idx, landmark in enumerate(result.landmarks):
+        for idx, landmark in enumerate(result.pose_landmarks):
             print(f"image{id:02d} Poses\nIndex {idx:02d} -> X: {landmark.x:.4f}, Y: {landmark.y:.4f}, Z: {landmark.z:.4f}")
             landmarkdata.append(idx)
             landmarkdata.append(landmark.x)
             landmarkdata.append(landmark.y)
             landmarkdata.append(landmark.z)
+        if result.left_hand_landmarks:
+            for idx,landmark in enumerate(result.left_hand_landmarks):
+                print(f"image{id:02d} left hand \nIndex {idx:02d} -> X: {landmark.x:.4f}, Y: {landmark.y:.4f}, Z: {landmark.z:.4f}")
+                landmarkdata.append(idx)
+                landmarkdata.append(landmark.x)
+                landmarkdata.append(landmark.y)
+                landmarkdata.append(landmark.z)
+        else:
+            for idx,landmark in enumerate(result.left_hand_landmarks):
+                print(0)
+                landmarkdata.append(0)
+        if result.right_hand_landmarks:
+            for idx,landmark in enumerate(result.right_hand_landmarks):
+                print(f"image{id:02d} right hand\nIndex {idx:02d} -> X: {landmark.x:.4f}, Y: {landmark.y:.4f}, Z: {landmark.z:.4f}")
+                landmarkdata.append(idx)
+                landmarkdata.append(landmark.x)
+                landmarkdata.append(landmark.y)
+                landmarkdata.append(landmark.z)
+        else:
+            for idx,landmark in enumerate(result.right_hand_landmarks):
+                landmarkdata.append(0)
+                print(0)
         landmarkdata.append(0)
         landmark_hello.append(landmarkdata)
 
