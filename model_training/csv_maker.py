@@ -9,12 +9,13 @@ HolisticLandmarkerOptions = mp.tasks.vision.HolisticLandmarkerOptions
 VisionRunningMode = mp.tasks.vision.RunningMode
 
 
-model_path = './model_training/holistic_landmarker.task'
-folder_path = Path("./model_training/gestures/hello")
+model_path = str(Path('./model_training/holistic_landmarker.task').resolve())
+folder_path = Path("./model_training/gestures/hello").resolve()
+
 file_list=[]
 for file in folder_path.iterdir():
-    if file.is_file():
-        file_list.append(str(Path(file)))
+    if file.is_file() and file.suffix.lower() in ['.jpg', '.jpeg', '.png']:
+        file_list.append(str(file.resolve()))
 
 
 options = HolisticLandmarkerOptions(
