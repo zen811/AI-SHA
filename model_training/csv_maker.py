@@ -53,19 +53,25 @@ with HolisticLandmarker.create_from_options(options) as landmarker:
                 landmarkdata.append(landmark.z)
         else:
             for idx,landmark in enumerate(result.left_hand_landmarks):
-                print(0)
+                print(f"image{id:02d} left hand Index {idx:02d} -> X: {0}, Y: {0}, Z: {0} Skipped")
+                landmarkdata.append(idx)
+                landmarkdata.append(0)
+                landmarkdata.append(0)
                 landmarkdata.append(0)
         if result.right_hand_landmarks:
             for idx,landmark in enumerate(result.right_hand_landmarks):
-                print(f"image{id:02d} right hand\nIndex {idx:02d} -> X: {landmark.x:.4f}, Y: {landmark.y:.4f}, Z: {landmark.z:.4f}")
+                print(f"image{id:02d} right hand Index {idx:02d} -> X: {landmark.x:.4f}, Y: {landmark.y:.4f}, Z: {landmark.z:.4f}")
                 landmarkdata.append(idx)
                 landmarkdata.append(landmark.x)
                 landmarkdata.append(landmark.y)
                 landmarkdata.append(landmark.z)
         else:
             for idx,landmark in enumerate(result.right_hand_landmarks):
+                print(f"image{id:02d} right hand Index {idx:02d} -> X: {0}, Y: {0}, Z: {0} Skipped")
+                landmarkdata.append(idx)
                 landmarkdata.append(0)
-                print(0)
+                landmarkdata.append(0)
+                landmarkdata.append(0)
         landmarkdata.append(0)
         landmark_hello.append(landmarkdata)
 

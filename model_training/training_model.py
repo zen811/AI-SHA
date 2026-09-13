@@ -44,6 +44,6 @@ print("Confusion Matrix: \n", confusion_matrix(Y_val,Y_pred))
 model_pack = {'model': xgb_classifier,'scaler': scalar,'label_encoder': label_enc}
 
 
-with open('engine_model_pack.pkl', 'wb') as file:
+with open('Gesture_model.pkl', 'wb') as file:
     pickle.dump(model_pack, file)
 
