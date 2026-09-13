@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import pickle
-with open('./AI-SHA/Gesture_model_pkl.pkl', 'rb') as file:
+with open('./AI-SHA/Gesture_model.pkl', 'rb') as file:
     model_pack = pickle.load(file) 
 
 xgb_classifier = model_pack['model']
@@ -20,7 +20,7 @@ def Gesture_checker(raw_data):
 
 empt=[]
 vals=[]
-for _ in range(216):
+for _ in range(226):
     empt.append(_)  #replace with index of the landmark in order pose left hand right hand
                     #add append to add x y z valus of the index
     vals.append(np.random.rand())
