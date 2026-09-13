@@ -9,8 +9,8 @@ HolisticLandmarkerOptions = mp.tasks.vision.HolisticLandmarkerOptions
 VisionRunningMode = mp.tasks.vision.RunningMode
 
 
-model_path = './AI-SHA/model_training/holistic_landmarker.task'
-folder_path = Path("./AI-SHA/model_training/gestures/hello")
+model_path = './model_training/holistic_landmarker.task'
+folder_path = Path("./model_training/gestures/hello")
 file_list=[]
 for file in folder_path.iterdir():
     if file.is_file():
