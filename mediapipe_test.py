@@ -118,7 +118,7 @@ with HolisticLandmarker.create_from_options(options) as landmarker:
         Image_frame_data = pd.DataFrame([landmarkdata],columns=range(225))
         result = Gesture_checker(Image_frame_data)
 
-        print(result)
+        print("Hello"if result== 0 else "Unable to detect")
         cv.imshow('MediaPipe Tasks Tracking', frame)
         if cv.waitKey(1) & 0xFF == ord('q'):
             break
