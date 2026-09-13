@@ -3,13 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI-SHA Real-Time Sign Language & Face Inference</title>
+  <title>AI-SHA</title>
 
-  <!-- MediaPipe JS Libraries -->
+  <!-- MediaPipe JS Libraries for Pose & Hands -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
 
   <style>
     body {
@@ -24,25 +23,6 @@
       color: #ffffff;
       font-family: system-ui, -apple-system, sans-serif;
     }
-    .controls {
-      margin-bottom: 16px;
-      display: flex;
-      gap: 12px;
-    }
-    button {
-      background-color: #334155;
-      color: white;
-      border: 2px solid transparent;
-      padding: 10px 20px;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    button.active {
-      background-color: #2563eb;
-      border-color: #60a5fa;
-    }
     .video-container {
       position: relative;
       width: 640px;
@@ -51,7 +31,7 @@
       overflow: hidden;
       box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
     }
-    /* Mirror video feed for natural interaction */
+    /* Mirror camera stream for intuitive interaction */
     #webcam, #output_canvas {
       position: absolute;
       top: 0;
@@ -60,7 +40,7 @@
       height: 480px;
       transform: scaleX(-1);
     }
-    /* Live Detected Text Display Card */
+    /* Result Display Overlay */
     .result-card {
       position: absolute;
       top: 16px;
@@ -85,15 +65,9 @@
 </head>
 <body>
 
-  <h2>AI-SHA Sign Language & Vision AI</h2>
-
-  <div class="controls">
-    <button id="handBtn" class="active" onclick="setMode('hands')">Sign Detection</button>
-    <button id="faceBtn" onclick="setMode('face')">Specific Face Features</button>
-  </div>
+  <h2>AI-SHA </h2>
 
   <div class="video-container">
-    <!-- Real-time Phrase Output Overlay -->
     <div class="result-card">
       <span>Detected: </span>
       <span id="detectedWord" class="result-text">Waiting...</span>
@@ -108,10 +82,7 @@
     const canvasElement = document.getElementById('output_canvas');
     const canvasCtx = canvasElement.getContext('2d');
     const detectedWordEl = document.getElementById('detectedWord');
-    
-    let activeMode = 'hands';
 
-    // Map your custom model classification results (0..3) to text phrases
     const SIGN_DICTIONARY = {
       0: "Hello",
       1: "Thank You",
@@ -119,52 +90,32 @@
       3: "Sorry"
     };
 
-    // Landmark index mapping for targeted facial features
-    const FEATURE_INDICES = {
-      forehead: [10, 67, 297, 338, 109],
-      cheeks: [116, 345, 50, 280, 205, 425],
-      chin: [152, 175, 396, 200],
-      ears: [234, 454, 127, 356]
-    };
-
-    // 1. Initialize MediaPipe Hands
-    const hands = new Hands({
-      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    // 1. Initialize MediaPipe Holistic Pipeline
+    const holistic = new Holistic({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`
     });
-    hands.setOptions({
-      maxNumHands: 2,
+
+    holistic.setOptions({
       modelComplexity: 1,
+      smoothLandmarks: true,
       minDetectionConfidence: 0.5,
       minTrackingConfidence: 0.5
     });
-    hands.onResults(onHandResults);
 
-    // 2. Initialize MediaPipe Face Mesh
-    const faceMesh = new FaceMesh({
-      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
-    });
-    faceMesh.setOptions({
-      maxNumFaces: 1,
-      refineLandmarks: true,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5
-    });
-    faceMesh.onResults(onFaceResults);
+    holistic.onResults(onHolisticResults);
 
-    // Rule-Based Classifier for Hand Gestures (Simulates model prediction logic in JS)
+    // Classification function matching your target model rules
     function classifyGesture(landmarks) {
-      const thumbTip = landmarks[4];
       const indexTip = landmarks[8];
       const middleTip = landmarks[12];
       const ringTip = landmarks[16];
       const pinkyTip = landmarks[20];
-      
+
       const indexPip = landmarks[6];
       const middlePip = landmarks[10];
       const ringPip = landmarks[14];
       const pinkyPip = landmarks[18];
 
-      // Rule checks: fingers raised (y tip < y pip joint)
       const indexUp = indexTip.y < indexPip.y;
       const middleUp = middleTip.y < middlePip.y;
       const ringUp = ringTip.y < ringPip.y;
@@ -173,95 +124,58 @@
       let result = -1;
 
       if (indexUp && middleUp && ringUp && pinkyUp) {
-        result = 0; // "Hello" (Open Hand)
+        result = 0; // "Hello"
       } else if (!indexUp && !middleUp && !ringUp && !pinkyUp) {
-        result = 3; // "Sorry" (Fist)
+        result = 3; // "Sorry"
       } else if (indexUp && middleUp && !ringUp && !pinkyUp) {
-        result = 2; // "Bye" (Peace / Two fingers up)
+        result = 2; // "Bye"
       } else if (indexUp && !middleUp && !ringUp && !pinkyUp) {
-        result = 1; // "Thank You" (Pointing Up)
+        result = 1; // "Thank You"
       }
 
       return result in SIGN_DICTIONARY ? SIGN_DICTIONARY[result] : "Detecting...";
     }
 
-    // 3. Render Hand Landmarks + Perform Inference
-    function onHandResults(results) {
-      if (activeMode !== 'hands') return;
+    // 2. Process and Render Posture & Hands
+    function onHolisticResults(results) {
       canvasCtx.save();
       canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
       canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-        for (const landmarks of results.multiHandLandmarks) {
-          drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, { color: '#00FF00', lineWidth: 3 });
-          drawLandmarks(canvasCtx, landmarks, { color: '#FF0000', lineWidth: 1, radius: 3 });
-
-          // Run gesture classification on the primary detected hand
-          const detectedWord = classifyGesture(landmarks);
-          detectedWordEl.innerText = detectedWord;
-        }
-      } else {
-        detectedWordEl.innerText = "No hand detected";
+      // Render Body Posture Skeleton (excluding facial keypoints)
+      if (results.poseLandmarks) {
+        drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#00FF00', lineWidth: 4 });
+        drawLandmarks(canvasCtx, results.poseLandmarks, { color: '#FF0000', lineWidth: 2, radius: 4 });
       }
+
+      // Render Right Hand Skeleton & Run Inference
+      let activeHand = results.rightHandLandmarks || results.leftHandLandmarks;
+
+      if (results.leftHandLandmarks) {
+        drawConnectors(canvasCtx, results.leftHandLandmarks, HAND_CONNECTIONS, { color: '#38bdf8', lineWidth: 3 });
+        drawLandmarks(canvasCtx, results.leftHandLandmarks, { color: '#f43f5e', lineWidth: 1, radius: 3 });
+      }
+
+      if (results.rightHandLandmarks) {
+        drawConnectors(canvasCtx, results.rightHandLandmarks, HAND_CONNECTIONS, { color: '#38bdf8', lineWidth: 3 });
+        drawLandmarks(canvasCtx, results.rightHandLandmarks, { color: '#f43f5e', lineWidth: 1, radius: 3 });
+      }
+
+      if (activeHand) {
+        detectedWordEl.innerText = classifyGesture(activeHand);
+      } else if (!results.poseLandmarks) {
+        detectedWordEl.innerText = "No subject detected";
+      } else {
+        detectedWordEl.innerText = "Tracking Posture...";
+      }
+
       canvasCtx.restore();
     }
 
-    function drawPoint(ctx, x, y, color = '#38bdf8', radius = 4) {
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, 2 * Math.PI);
-      ctx.fillStyle = color;
-      ctx.fill();
-    }
-
-    // 4. Render Specific Facial Landmarks
-    function onFaceResults(results) {
-      if (activeMode !== 'face') return;
-      canvasCtx.save();
-      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-      canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-
-      if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-        detectedWordEl.innerText = "Face Tracking Active";
-        for (const landmarks of results.multiFaceLandmarks) {
-          drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYEBROW, { color: '#38bdf8', lineWidth: 3 });
-          drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYEBROW, { color: '#38bdf8', lineWidth: 3 });
-          drawConnectors(canvasCtx, landmarks, FACEMESH_LIPS, { color: '#f43f5e', lineWidth: 3 });
-
-          const width = canvasElement.width;
-          const height = canvasElement.height;
-
-          Object.keys(FEATURE_INDICES).forEach(feature => {
-            FEATURE_INDICES[feature].forEach(index => {
-              const pt = landmarks[index];
-              if (pt) {
-                drawPoint(canvasCtx, pt.x * width, pt.y * height, '#f59e0b', 5);
-              }
-            });
-          });
-        }
-      } else {
-        detectedWordEl.innerText = "No face detected";
-      }
-      canvasCtx.restore();
-    }
-
-    // 5. Mode Switcher
-    function setMode(mode) {
-      activeMode = mode;
-      document.getElementById('handBtn').classList.toggle('active', mode === 'hands');
-      document.getElementById('faceBtn').classList.toggle('active', mode === 'face');
-      detectedWordEl.innerText = "Waiting...";
-    }
-
-    // 6. Start Camera Feed
+    // 3. Bind Web Camera Pipeline
     const camera = new Camera(videoElement, {
       onFrame: async () => {
-        if (activeMode === 'hands') {
-          await hands.send({ image: videoElement });
-        } else if (activeMode === 'face') {
-          await faceMesh.send({ image: videoElement });
-        }
+        await holistic.send({ image: videoElement });
       },
       width: 640,
       height: 480
