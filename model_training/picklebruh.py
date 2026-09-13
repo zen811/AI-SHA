@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import pickle
-with open('./AI-SHA/Gesture_model.pkl', 'rb') as file:
+with open('./Gesture_model.pkl', 'rb') as file:
     model_pack = pickle.load(file) 
 
 xgb_classifier = model_pack['model']
