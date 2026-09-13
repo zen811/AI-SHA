@@ -127,9 +127,10 @@ with HolisticLandmarker.create_from_options(options) as landmarker:
             text_res="Bye"
         if result ==3:
             text_res="Sorry"
-            
+
         cv.imshow('MediaPipe Tasks Tracking', frame)
         cv.putText(frame,str(text_res),(100,100),cv.FONT_HERSHEY_SIMPLEX,1,(0, 225, 0),2)
+        print(text_res)
 
         if cv.waitKey(1) & 0xFF == ord('q'):
             break
