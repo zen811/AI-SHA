@@ -20,7 +20,7 @@ def Gesture_checker(raw_data):
 
 empt=[]
 vals=[]
-for _ in range(226):
+for _ in range(225):
     empt.append(_)  #replace with index of the landmark in order pose left hand right hand
                     #add append to add x y z valus of the index
     vals.append(np.random.rand())
