@@ -32,7 +32,7 @@ cap = cv.VideoCapture(0)
 ret, frame = cap.read()
 height, width, channels = frame.shape
 
-with open('./AI-SHA/Gesture_model.pkl', 'rb') as file:
+with open('./Gesture_model.pkl', 'rb') as file:
     model_pack = pickle.load(file) 
 
 xgb_classifier = model_pack['model']
@@ -58,7 +58,7 @@ def draw_landmarks_group(frame, landmarks_list):
             start_pt = (x, y)
             landmark_coordinates=[landmark.x,landmark.y,landmark.z]
             text=[round(_,3) for _ in landmark_coordinates]
-            cv.putText(frame,str(text),(x,y),cv.FONT_HERSHEY_SIMPLEX,0.25,(0, 255, 0),2)
+            cv.putText(frame,str(text),(x,y),cv.FONT_HERSHEY_SIMPLEX,0.25,(0, 225, 0),2)
             cv.circle(frame, (x, y), 3, (0, 255, 0), -1)      #Draw a tracking node dot
             drawing_utils.draw_landmarks(frame, landmarker_result.pose_landmarks, POSE_GRAPH)
             drawing_utils.draw_landmarks(frame,landmarker_result.left_hand_landmarks,HAND_GRAPH)
@@ -115,7 +115,7 @@ with HolisticLandmarker.create_from_options(options) as landmarker:
         else:
             landmarkdata.extend([0.0] * (21 * 3))
         
-        Image_frame_data = pd.DataFrame([landmarkdata],columns=range(255))
+        Image_frame_data = pd.DataFrame([landmarkdata],columns=range(225))
         result = Gesture_checker(Image_frame_data)
 
         print(result)
