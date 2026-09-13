@@ -31,9 +31,11 @@ options = HolisticLandmarkerOptions(
 landmark_hello=[]
 with HolisticLandmarker.create_from_options(options) as landmarker:
     for id,file in enumerate(file_list):
-        mp_image = mp.Image.create_from_file(str(file))
-        mp_image = cv.resize(file,(640,480))
-        mp_image = cv.cvtColor(mp_image,cv.COLOR_BGR2RGB)
+        image = cv.imread(file)
+        resized_image = cv.resize(image,(640,480))
+        rgb_image = cv.cvtColor(resized_image,cv.COLOR_BGR2RGB)
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_image)
+        
         result = landmarker.detect(mp_image)
         landmarkdata=[]
         for idx, landmark in enumerate(result.pose_landmarks):
@@ -51,6 +53,7 @@ with HolisticLandmarker.create_from_options(options) as landmarker:
                 landmarkdata.append(landmark.z)
         else:
             for idx,landmark in enumerate(result.left_hand_landmarks):
+                print(0)
                 landmarkdata.append(0)
         if result.right_hand_landmarks:
             for idx,landmark in enumerate(result.right_hand_landmarks):
@@ -62,6 +65,7 @@ with HolisticLandmarker.create_from_options(options) as landmarker:
         else:
             for idx,landmark in enumerate(result.right_hand_landmarks):
                 landmarkdata.append(0)
+                print(0)
         landmarkdata.append(0)
         landmark_hello.append(landmarkdata)
 
