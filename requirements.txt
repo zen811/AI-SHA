@@ -4,3 +4,4 @@ mediapipe
 opencv-python
 xgboost
 pickle
+--upgrade pip
