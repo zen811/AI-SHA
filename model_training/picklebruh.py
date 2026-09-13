@@ -1,0 +1,32 @@
+import pandas as pd
+import numpy as np
+import pickle
+with open('./AI-SHA/Gesture_model_pkl.pkl', 'rb') as file:
+    model_pack = pickle.load(file) 
+
+xgb_classifier = model_pack['model']
+scalar = model_pack['scaler']
+label_enc = model_pack['label_encoder']
+
+def Gesture_checker(raw_data):
+    
+    scaled_data = scalar.transform(raw_data)
+    
+    numeric_prediction = xgb_classifier.predict(scaled_data)
+    
+    text_prediction = label_enc.inverse_transform(numeric_prediction)
+    
+    return text_prediction[0]
+
+empt=[]
+vals=[]
+for _ in range(216):
+    empt.append(_)  #replace with index of the landmark in order pose left hand right hand
+                    #add append to add x y z valus of the index
+    vals.append(np.random.rand())
+
+print(vals)
+new_engine_data = pd.DataFrame([vals],columns=empt)
+print(new_engine_data)
+result = Gesture_checker(new_engine_data)
+print(f"Predicted Engine Condition: {result}")
