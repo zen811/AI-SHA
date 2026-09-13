@@ -26,7 +26,6 @@ for _ in range(225):
     vals.append(np.random.rand())
 
 print(vals)
-new_engine_data = pd.DataFrame([vals],columns=empt)
-print(new_engine_data)
-result = Gesture_checker(new_engine_data)
-print(f"Predicted Gesture: {result}")
+Image_frame_data = pd.DataFrame([vals],columns=([0]*225))
+result = Gesture_checker(Image_frame_data)
+# print(f"Predicted Gesture: {result}")
