@@ -41,13 +41,13 @@ with HolisticLandmarker.create_from_options(options) as landmarker:
             landmarkdata.append(landmark.y)
             landmarkdata.append(landmark.z)
         for idx,landmark in enumerate(result.left_hand_landmarks):
-            print(f"For Poses\nIndex {idx:02d} -> X: {landmark.x:.4f}, Y: {landmark.y:.4f}, Z: {landmark.z:.4f}")
+            print(f"For left hand \nIndex {idx:02d} -> X: {landmark.x:.4f}, Y: {landmark.y:.4f}, Z: {landmark.z:.4f}")
             landmarkdata.append(idx)
             landmarkdata.append(landmark.x)
             landmarkdata.append(landmark.y)
             landmarkdata.append(landmark.z)
         for idx,landmark in enumerate(result.right_hand_landmarks):
-            print(f"For Poses\nIndex {idx:02d} -> X: {landmark.x:.4f}, Y: {landmark.y:.4f}, Z: {landmark.z:.4f}")
+            print(f"For right hand\nIndex {idx:02d} -> X: {landmark.x:.4f}, Y: {landmark.y:.4f}, Z: {landmark.z:.4f}")
             landmarkdata.append(idx)
             landmarkdata.append(landmark.x)
             landmarkdata.append(landmark.y)
