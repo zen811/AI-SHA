@@ -115,9 +115,9 @@ with HolisticLandmarker.create_from_options(options) as landmarker:
         else:
             landmarkdata.extend([0.0] * (21 * 3))
         
-        Image_frame_data = pd.DataFrame([landmarkdata],columns=([0]*225))
+        Image_frame_data = pd.DataFrame([landmarkdata],columns=range(255))
         result = Gesture_checker(Image_frame_data)
-        
+
         print(result)
         cv.imshow('MediaPipe Tasks Tracking', frame)
         if cv.waitKey(1) & 0xFF == ord('q'):
