@@ -11,7 +11,10 @@ VisionRunningMode = mp.tasks.vision.RunningMode
 
 model_path = './AI-SHA/holistic_landmarker.task'
 folder_path = Path("./AI-SHA/model_training/gestures/hello")
-file_list = [file for file in folder_path.iterdir() if file.is_file()]
+file_list=[]
+for file in folder_path.iterdir():
+    if file.is_file():
+        file_list.append(file)
 
 
 options = HolisticLandmarkerOptions(
