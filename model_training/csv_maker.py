@@ -75,4 +75,4 @@ with HolisticLandmarker.create_from_options(options) as landmarker:
     landmark_hello.append(landmarkdata)
 
 df = pd.DataFrame(landmark_hello)
-df.to_csv("Thank_u.csv", index=False)
+df.to_csv("./model_training/Thank_u.csv", index=False)
