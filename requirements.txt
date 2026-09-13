@@ -1,7 +1,6 @@
---upgrade pip
+opencv-python
 pandas
 mediapipe
-opencv-python
 xgboost
 pickle
 
