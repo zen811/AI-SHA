@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI-SHA Real-Time Inference</title>
+  
+  <!-- MediaPipe JS Dependencies -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #0f172a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      color: #ffffff;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .video-container {
+      position: relative;
+      width: 640px;
+      height: 480px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+    /* Mirror webcam feed for natural interaction */
+    #webcam, #output_canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 640px;
+      height: 480px;
+      transform: scaleX(-1);
+    }
+  </style>
+</head>
+<body>
+
+  <h2>AI-SHA Web Inference</h2>
+  <div class="video-container">
+    <video id="webcam" autoplay playsinline></video>
+    <canvas id="output_canvas" width="640" height="480"></canvas>
+  </div>
+
+  <script>
+    const videoElement = document.getElementById('webcam');
+    const canvasElement = document.getElementById('output_canvas');
+    const canvasCtx = canvasElement.getContext('2d');
+
+    // 1. Process and draw keypoints/landmarks onto canvas
+    function onResults(results) {
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      
+      // Draw base video frame
+      canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+      if (results.multiHandLandmarks) {
+        for (const landmarks of results.multiHandLandmarks) {
+          // Draw skeleton joints (connections)
+          drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {
+            color: '#00FF00',
+            lineWidth: 4
+          });
+          // Draw keypoint landmarks
+          drawLandmarks(canvasCtx, landmarks, {
+            color: '#FF0000',
+            lineWidth: 2,
+            radius: 4
+          });
+        }
+      }
+      canvasCtx.restore();
+    }
+
+    // 2. Initialize MediaPipe Hands instance
+    const hands = new Hands({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
+
+    hands.setOptions({
+      maxNumHands: 2,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+
+    hands.onResults(onResults);
+
+    // 3. Bind browser webcam stream
+    const camera = new Camera(videoElement, {
+      onFrame: async () => {
+        await hands.send({ image: videoElement });
+      },
+      width: 640,
+      height: 480
+    });
+
+    camera.start();
+  </script>
+</body>
+</html>
