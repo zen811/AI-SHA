@@ -5,8 +5,12 @@ pandas
 mediapipe
 xgboost
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 streamlit
 
+=======
+av
+>>>>>>> Stashed changes
 =======
 av
 >>>>>>> Stashed changes
