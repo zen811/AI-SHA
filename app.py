@@ -60,8 +60,8 @@ class LandmarkProcessor:
 
         img = frame.to_ndarray(format="bgr24")
 
-            # Only run MediaPipe every 3rd frame
-        if self.frame_count % 3 == 0:
+    # Run MediaPipe only every 10th frame
+        if self.frame_count % 10 == 0:
 
             rgb_frame = cv.cvtColor(img, cv.COLOR_BGR2RGB)
 
@@ -77,98 +77,26 @@ class LandmarkProcessor:
                 self.timestamp_ms
             )
 
-            landmarkdata = []
-
-            # POSE
-            if (
-                landmarker_result.pose_landmarks
-                and len(landmarker_result.pose_landmarks) > 0
-            ):
-                pose_points = (
-                    landmarker_result.pose_landmarks[0]
-                    if isinstance(landmarker_result.pose_landmarks[0], list)
-                    else landmarker_result.pose_landmarks
-                )
-
-                for landmark in pose_points:
-                    landmarkdata.extend([
-                        landmark.x,
-                        landmark.y,
-                        landmark.z
-                    ])
-            else:
-                landmarkdata.extend([0.0] * (33 * 3))
-
-        # LEFT HAND
-            if landmarker_result.left_hand_landmarks and len(landmarker_result.left_hand_landmarks) > 0:
-                left_hand_points = (
-                    landmarker_result.left_hand_landmarks[0]
-                    if isinstance(landmarker_result.left_hand_landmarks[0], list)
-                    else landmarker_result.left_hand_landmarks
-            )   
-
-                for landmark in left_hand_points:
-                    landmarkdata.extend([
-                        landmark.x,
-                        landmark.y,
-                        landmark.z
-                    ])
-            else:
-                landmarkdata.extend([0.0] * (21 * 3))
-
-            # RIGHT HAND
-            if (
-                landmarker_result.right_hand_landmarks
-                and len(landmarker_result.right_hand_landmarks) > 0
-            ):
-                right_hand_points = (
-                    landmarker_result.right_hand_landmarks[0]
-                    if isinstance(landmarker_result.right_hand_landmarks[0], list)
-                    else landmarker_result.right_hand_landmarks
-                )
-
-                for landmark in right_hand_points:
-                    landmarkdata.extend([
-                        landmark.x,
-                        landmark.y,
-                        landmark.z
-                    ])
-            else:
-                landmarkdata.extend([0.0] * (21 * 3))
-
-            # Make sure we still have 225 features
-            Image_frame_data = pd.DataFrame(
-                [landmarkdata],
-                columns=range(225)
+            cv.putText(
+                img,
+                "MEDIAPIPE OK",
+                (50, 80),
+                cv.FONT_HERSHEY_SIMPLEX,
+                2,
+                (0, 255, 0),
+                3
             )
 
-            # Gesture prediction
-            result = Gesture_checker(Image_frame_data)
-
-            text_res = "Unknown"
-
-            if result == 0:
-                text_res = "Hello"
-            elif result == 1:
-                text_res = "Thank You"
-            elif result == 2:
-                text_res = "Sorry"
-            elif result == 3:
-                text_res = "Bye"
-
-            # Save the latest prediction
-            self.last_prediction = text_res
-
-        # Draw the latest prediction on EVERY frame
-        cv.putText(
-            img,
-            str(self.last_prediction),
-            (50, 80),
-            cv.FONT_HERSHEY_SIMPLEX,
-            2,
-            (0, 255, 0),
-            3
-        )
+        else:
+            cv.putText(
+                img,
+                "WAITING",
+                (50, 80),
+                cv.FONT_HERSHEY_SIMPLEX,
+                2,
+                (0, 255, 0),
+                3
+            )
 
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
