@@ -55,8 +55,21 @@ class LandmarkProcessor:
 
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
         img = frame.to_ndarray(format="bgr24")
-        return av.VideoFrame.from_ndarray(img, format="bgr24")
 
+        rgb_frame = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+        mp_image = mp.Image(
+            image_format=mp.ImageFormat.SRGB,
+            data=rgb_frame
+        )
+
+        self.timestamp_ms += 33
+
+        landmarker_result = self.landmarker.detect_for_video(
+            mp_image,
+         self.timestamp_ms
+      )
+
+        return av.VideoFrame.from_ndarray(img, format="bgr24")
 # 3. WebRTC Streamer Setup
 RTC_CONFIGURATION = RTCConfiguration(
     {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
