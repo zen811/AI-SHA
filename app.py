@@ -60,14 +60,13 @@ class LandmarkProcessor:
 
         img = frame.to_ndarray(format="bgr24")
 
-        # Run MediaPipe + prediction only every 10th frame
         if self.frame_count % 10 == 0:
 
             rgb_frame = cv.cvtColor(img, cv.COLOR_BGR2RGB)
 
             mp_image = mp.Image(
-                image_format=mp.ImageFormat.SRGB,
-                data=rgb_frame
+            image_format=mp.ImageFormat.SRGB,
+            data=rgb_frame
             )
 
             self.timestamp_ms += 33
@@ -79,9 +78,7 @@ class LandmarkProcessor:
 
             landmarkdata = []
 
-        # -------------------------
-        # POSE - 33 landmarks
-        # -------------------------
+        # POSE
             if (
                 landmarker_result.pose_landmarks
                 and len(landmarker_result.pose_landmarks) > 0
@@ -99,15 +96,13 @@ class LandmarkProcessor:
                         landmark.z
                     ])
             else:
-                landmarkdata.extend([0.0] * (33 * 3))
+                landmarkdata.extend([0.0] * 99)
 
-        # -------------------------
-        # LEFT HAND - 21 landmarks
-        # -------------------------
+        # LEFT HAND
             if (
                 landmarker_result.left_hand_landmarks
                 and len(landmarker_result.left_hand_landmarks) > 0
-            ):
+        )   :
                 left_hand_points = (
                     landmarker_result.left_hand_landmarks[0]
                     if isinstance(landmarker_result.left_hand_landmarks[0], list)
@@ -121,11 +116,9 @@ class LandmarkProcessor:
                         landmark.z
                     ])
             else:
-                landmarkdata.extend([0.0] * (21 * 3))
+                landmarkdata.extend([0.0] * 63)
 
-        # -------------------------
-        # RIGHT HAND - 21 landmarks
-        # -------------------------
+        # RIGHT HAND
             if (
                 landmarker_result.right_hand_landmarks
                 and len(landmarker_result.right_hand_landmarks) > 0
@@ -143,47 +136,32 @@ class LandmarkProcessor:
                         landmark.z
                     ])
             else:
-                landmarkdata.extend([0.0] * (21 * 3))
+                landmarkdata.extend([0.0] * 63)
 
-        # -------------------------
-        # CHECK FEATURES
-        # -------------------------
-            if len(landmarkdata) == 225:
+        # ONLY CHECK THE LANDMARK DATA
+            cv.putText(
+                img,
+                f"Landmarks: {len(landmarkdata)}",
+                (50, 80),
+                cv.FONT_HERSHEY_SIMPLEX,
+                1.2,
+                (0, 255, 0),
+                3
+            )
 
-                Image_frame_data = pd.DataFrame(
-                    [landmarkdata],
-                    columns=range(225)
-                )
+        else:
 
-            # -------------------------
-            # PREDICTION
-            # -------------------------
-                result = Gesture_checker(Image_frame_data)
+            cv.putText(
+                img,
+                "Running...",
+                (50, 80),
+                cv.FONT_HERSHEY_SIMPLEX,
+                1.2,
+                (0, 255, 0),
+                3
+            )
 
-            # IMPORTANT:
-            # Gesture_checker() may return
-            # "Hello", "Thank You", etc.
-            # rather than 0, 1, 2, 3.
-
-                self.last_prediction = str(result)
-
-    # -------------------------
-    # DRAW PREDICTION
-    # -------------------------
-        cv.putText(
-            img,
-            self.last_prediction,
-            (50, 80),
-            cv.FONT_HERSHEY_SIMPLEX,
-            1.5,
-            (0, 255, 0),
-            3
-        )
-
-        return av.VideoFrame.from_ndarray(
-            img,
-            format="bgr24"
-        )
+        return av.VideoFrame.from_ndarray(img, format="bgr24")
 
 # 3. WebRTC Streamer Setup
 RTC_CONFIGURATION = RTCConfiguration(
