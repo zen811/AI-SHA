@@ -1,5 +1,5 @@
 import time
-import cv2 as cv
+import cv2.headless as cv
 import mediapipe as mp
 from mediapipe.tasks.python import vision
 from mediapipe.tasks.python import vision
