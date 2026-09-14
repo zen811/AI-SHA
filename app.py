@@ -72,6 +72,28 @@ label_enc = model_pack["label_encoder"]
 
 
 # ============================================================
+# XGBOOST COMPATIBILITY FIX
+# ============================================================
+
+# IMPORTANT:
+# The saved XGBClassifier was created with a version/configuration
+# that expects the use_label_encoder attribute.
+#
+# We explicitly add the attribute to the loaded object.
+# We do NOT use set_params() here.
+
+try:
+
+    xgb_classifier.use_label_encoder = False
+
+except Exception as e:
+
+    st.error(
+        f"Could not add XGBoost compatibility attribute: {e}"
+    )
+
+
+# ============================================================
 # LANDMARK PROCESSOR
 # ============================================================
 
@@ -89,11 +111,15 @@ class LandmarkProcessor:
 
         self.last_prediction = "Unknown"
 
-        # Store the error permanently
         self.last_error = ""
-
-        # Store the stage where error happened
         self.error_stage = ""
+
+        self.xgb_attribute_status = (
+            hasattr(
+                xgb_classifier,
+                "use_label_encoder"
+            )
+        )
 
 
     def recv(
@@ -146,7 +172,9 @@ class LandmarkProcessor:
                 # LANDMARK EXTRACTION
                 # =================================================
 
-                self.error_stage = "Landmark extraction"
+                self.error_stage = (
+                    "Landmark extraction"
+                )
 
                 landmarkdata = []
 
@@ -266,8 +294,12 @@ class LandmarkProcessor:
 
 
                 # =================================================
-                # CHECK FEATURE COUNT
+                # FEATURE COUNT
                 # =================================================
+
+                self.error_stage = (
+                    "Feature count"
+                )
 
                 if len(landmarkdata) != 225:
 
@@ -281,7 +313,9 @@ class LandmarkProcessor:
                 # DATAFRAME
                 # =================================================
 
-                self.error_stage = "DataFrame"
+                self.error_stage = (
+                    "DataFrame"
+                )
 
                 Image_frame_data = pd.DataFrame(
                     [landmarkdata],
@@ -293,7 +327,9 @@ class LandmarkProcessor:
                 # SCALER
                 # =================================================
 
-                self.error_stage = "Scaler"
+                self.error_stage = (
+                    "Scaler"
+                )
 
                 scaled_data = scaler.transform(
                     Image_frame_data
@@ -311,10 +347,39 @@ class LandmarkProcessor:
 
 
                 # =================================================
-                # XGBOOST
+                # CHECK XGBOOST ATTRIBUTE
                 # =================================================
 
-                self.error_stage = "XGBoost prediction"
+                self.error_stage = (
+                    "XGBoost attribute check"
+                )
+
+                if not hasattr(
+                    xgb_classifier,
+                    "use_label_encoder"
+                ):
+
+                    # Force it again in case the loaded
+                    # object does something unusual.
+
+                    xgb_classifier.use_label_encoder = False
+
+
+                self.xgb_attribute_status = (
+                    hasattr(
+                        xgb_classifier,
+                        "use_label_encoder"
+                    )
+                )
+
+
+                # =================================================
+                # XGBOOST PREDICTION
+                # =================================================
+
+                self.error_stage = (
+                    "XGBoost prediction"
+                )
 
                 numeric_prediction = (
                     xgb_classifier.predict(
@@ -324,10 +389,12 @@ class LandmarkProcessor:
 
 
                 # =================================================
-                # LABEL DECODER
+                # LABEL DECODING
                 # =================================================
 
-                self.error_stage = "Label decoding"
+                self.error_stage = (
+                    "Label decoding"
+                )
 
                 text_prediction = (
                     label_enc.inverse_transform(
@@ -351,10 +418,11 @@ class LandmarkProcessor:
             except Exception as e:
 
                 # =================================================
-                # SAVE ERROR PERMANENTLY
+                # SAVE ERROR
                 # =================================================
 
                 error_type = type(e).__name__
+
                 error_message = str(e)
 
                 self.last_error = (
@@ -367,9 +435,12 @@ class LandmarkProcessor:
                 )
 
 
-                # Print full error to server logs
+                # =================================================
+                # SERVER LOG
+                # =================================================
+
                 print(
-                    "\n==============================",
+                    "\n================================",
                     flush=True
                 )
 
@@ -397,13 +468,22 @@ class LandmarkProcessor:
                 )
 
                 print(
-                    "==============================\n",
+                    "use_label_encoder exists:",
+                    hasattr(
+                        xgb_classifier,
+                        "use_label_encoder"
+                    ),
+                    flush=True
+                )
+
+                print(
+                    "================================\n",
                     flush=True
                 )
 
 
         # ====================================================
-        # DISPLAY NORMAL STATUS
+        # VIDEO STATUS
         # ====================================================
 
         if self.last_error == "":
@@ -411,9 +491,19 @@ class LandmarkProcessor:
             cv.putText(
                 img,
                 "Running...",
-                (50, 60),
+                (30, 60),
                 cv.FONT_HERSHEY_SIMPLEX,
                 0.9,
+                (0, 255, 0),
+                2
+            )
+
+            cv.putText(
+                img,
+                "XGBoost attribute: OK",
+                (30, 100),
+                cv.FONT_HERSHEY_SIMPLEX,
+                0.65,
                 (0, 255, 0),
                 2
             )
@@ -421,12 +511,12 @@ class LandmarkProcessor:
         else:
 
             # =================================================
-            # DISPLAY ERROR PERMANENTLY
+            # PERMANENT ERROR DISPLAY
             # =================================================
 
             cv.putText(
                 img,
-                "ERROR - CHECK BELOW",
+                "XGBOOST ERROR",
                 (30, 60),
                 cv.FONT_HERSHEY_SIMPLEX,
                 0.9,
@@ -444,13 +534,33 @@ class LandmarkProcessor:
                 2
             )
 
-            # Display first part of error
-            error_display = self.last_error[:85]
+
+            # -------------------------------------------------
+            # ERROR LINE 1
+            # -------------------------------------------------
+
+            error_line = self.last_error[:90]
 
             cv.putText(
                 img,
-                error_display,
+                error_line,
                 (30, 140),
+                cv.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (0, 0, 255),
+                2
+            )
+
+
+            # -------------------------------------------------
+            # ATTRIBUTE STATUS
+            # -------------------------------------------------
+
+            cv.putText(
+                img,
+                f"use_label_encoder exists: "
+                f"{self.xgb_attribute_status}",
+                (30, 180),
                 cv.FONT_HERSHEY_SIMPLEX,
                 0.55,
                 (0, 0, 255),
@@ -459,30 +569,13 @@ class LandmarkProcessor:
 
 
         # ====================================================
-        # LANDMARK COUNT
-        # ====================================================
-
-        if self.last_error == "":
-
-            cv.putText(
-                img,
-                "Landmarks: 225",
-                (30, 100),
-                cv.FONT_HERSHEY_SIMPLEX,
-                0.7,
-                (0, 255, 0),
-                2
-            )
-
-
-        # ====================================================
-        # PREDICTION
+        # PREDICTION DISPLAY
         # ====================================================
 
         cv.putText(
             img,
             f"Prediction: {self.last_prediction}",
-            (30, 210),
+            (30, 230),
             cv.FONT_HERSHEY_SIMPLEX,
             1.0,
             (0, 255, 0),
