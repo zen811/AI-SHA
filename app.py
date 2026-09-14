@@ -88,7 +88,12 @@ class LandmarkProcessor:
         self.frame_count = 0
 
         self.last_prediction = "Unknown"
+
+        # Store the error permanently
         self.last_error = ""
+
+        # Store the stage where error happened
+        self.error_stage = ""
 
 
     def recv(
@@ -104,242 +109,212 @@ class LandmarkProcessor:
 
 
         # ====================================================
-        # PROCESS ONLY EVERY 10TH FRAME
+        # PROCESS EVERY 10TH FRAME
         # ====================================================
 
         if self.frame_count % 10 == 0:
 
-            # ------------------------------------------------
-            # BGR -> RGB
-            # ------------------------------------------------
-
-            rgb_frame = cv.cvtColor(
-                img,
-                cv.COLOR_BGR2RGB
-            )
-
-
-            # ------------------------------------------------
-            # CREATE MEDIAPIPE IMAGE
-            # ------------------------------------------------
-
-            mp_image = mp.Image(
-                image_format=mp.ImageFormat.SRGB,
-                data=rgb_frame
-            )
-
-
-            # ------------------------------------------------
-            # MONOTONIC TIMESTAMP
-            # ------------------------------------------------
-
-            self.timestamp_ms += 33
-
-
-            # ------------------------------------------------
-            # MEDIAPIPE
-            # ------------------------------------------------
-
-            landmarker_result = (
-                self.landmarker.detect_for_video(
-                    mp_image,
-                    self.timestamp_ms
-                )
-            )
-
-
-            # =================================================
-            # LANDMARK EXTRACTION
-            # =================================================
-
-            landmarkdata = []
-
-
-            # -------------------------------------------------
-            # POSE - 33 LANDMARKS
-            # -------------------------------------------------
-
-            if (
-                landmarker_result.pose_landmarks
-                and len(
-                    landmarker_result.pose_landmarks
-                ) > 0
-            ):
-
-                pose_points = (
-                    landmarker_result.pose_landmarks[0]
-                    if isinstance(
-                        landmarker_result.pose_landmarks[0],
-                        list
-                    )
-                    else
-                    landmarker_result.pose_landmarks
-                )
-
-                for landmark in pose_points:
-
-                    landmarkdata.extend(
-                        [
-                            landmark.x,
-                            landmark.y,
-                            landmark.z
-                        ]
-                    )
-
-            else:
-
-                landmarkdata.extend(
-                    [0.0] * 99
-                )
-
-
-            # -------------------------------------------------
-            # LEFT HAND - 21 LANDMARKS
-            # -------------------------------------------------
-
-            if (
-                landmarker_result.left_hand_landmarks
-                and len(
-                    landmarker_result.left_hand_landmarks
-                ) > 0
-            ):
-
-                left_hand_points = (
-                    landmarker_result.left_hand_landmarks[0]
-                    if isinstance(
-                        landmarker_result.left_hand_landmarks[0],
-                        list
-                    )
-                    else
-                    landmarker_result.left_hand_landmarks
-                )
-
-                for landmark in left_hand_points:
-
-                    landmarkdata.extend(
-                        [
-                            landmark.x,
-                            landmark.y,
-                            landmark.z
-                        ]
-                    )
-
-            else:
-
-                landmarkdata.extend(
-                    [0.0] * 63
-                )
-
-
-            # -------------------------------------------------
-            # RIGHT HAND - 21 LANDMARKS
-            # -------------------------------------------------
-
-            if (
-                landmarker_result.right_hand_landmarks
-                and len(
-                    landmarker_result.right_hand_landmarks
-                ) > 0
-            ):
-
-                right_hand_points = (
-                    landmarker_result.right_hand_landmarks[0]
-                    if isinstance(
-                        landmarker_result.right_hand_landmarks[0],
-                        list
-                    )
-                    else
-                    landmarker_result.right_hand_landmarks
-                )
-
-                for landmark in right_hand_points:
-
-                    landmarkdata.extend(
-                        [
-                            landmark.x,
-                            landmark.y,
-                            landmark.z
-                        ]
-                    )
-
-            else:
-
-                landmarkdata.extend(
-                    [0.0] * 63
-                )
-
-
-            # =================================================
-            # SHOW LANDMARK COUNT
-            # =================================================
-
-            cv.putText(
-                img,
-                f"Landmarks: {len(landmarkdata)}",
-                (50, 70),
-                cv.FONT_HERSHEY_SIMPLEX,
-                1.0,
-                (0, 255, 0),
-                2
-            )
-
-
-            # =================================================
-            # CREATE DATAFRAME
-            # =================================================
-
-            Image_frame_data = pd.DataFrame(
-                [landmarkdata],
-                columns=range(225)
-            )
-
-
-            # =================================================
-            # SCALER
-            # =================================================
-
-            scaled_data = scaler.transform(
-                Image_frame_data
-            )
-
-
-            cv.putText(
-                img,
-                "SCALER OK",
-                (50, 110),
-                cv.FONT_HERSHEY_SIMPLEX,
-                1.0,
-                (0, 255, 0),
-                2
-            )
-
-
-            # =================================================
-            # CREATE SCALED DATAFRAME
-            # =================================================
-
-            scaled_dataframe = pd.DataFrame(
-                scaled_data,
-                columns=Image_frame_data.columns
-            )
-
-
-            # =================================================
-            # XGBOOST PREDICTION
-            # =================================================
-
             try:
 
-                cv.putText(
+                # =================================================
+                # MEDIAPIPE
+                # =================================================
+
+                self.error_stage = "MediaPipe"
+
+                rgb_frame = cv.cvtColor(
                     img,
-                    "PREDICTING...",
-                    (50, 150),
-                    cv.FONT_HERSHEY_SIMPLEX,
-                    1.0,
-                    (0, 255, 255),
-                    2
+                    cv.COLOR_BGR2RGB
                 )
 
+                mp_image = mp.Image(
+                    image_format=mp.ImageFormat.SRGB,
+                    data=rgb_frame
+                )
+
+                self.timestamp_ms += 33
+
+                landmarker_result = (
+                    self.landmarker.detect_for_video(
+                        mp_image,
+                        self.timestamp_ms
+                    )
+                )
+
+
+                # =================================================
+                # LANDMARK EXTRACTION
+                # =================================================
+
+                self.error_stage = "Landmark extraction"
+
+                landmarkdata = []
+
+
+                # -------------------------------------------------
+                # POSE
+                # -------------------------------------------------
+
+                if (
+                    landmarker_result.pose_landmarks
+                    and len(
+                        landmarker_result.pose_landmarks
+                    ) > 0
+                ):
+
+                    pose_points = (
+                        landmarker_result.pose_landmarks[0]
+                        if isinstance(
+                            landmarker_result.pose_landmarks[0],
+                            list
+                        )
+                        else
+                        landmarker_result.pose_landmarks
+                    )
+
+                    for landmark in pose_points:
+
+                        landmarkdata.extend(
+                            [
+                                landmark.x,
+                                landmark.y,
+                                landmark.z
+                            ]
+                        )
+
+                else:
+
+                    landmarkdata.extend(
+                        [0.0] * 99
+                    )
+
+
+                # -------------------------------------------------
+                # LEFT HAND
+                # -------------------------------------------------
+
+                if (
+                    landmarker_result.left_hand_landmarks
+                    and len(
+                        landmarker_result.left_hand_landmarks
+                    ) > 0
+                ):
+
+                    left_hand_points = (
+                        landmarker_result.left_hand_landmarks[0]
+                        if isinstance(
+                            landmarker_result.left_hand_landmarks[0],
+                            list
+                        )
+                        else
+                        landmarker_result.left_hand_landmarks
+                    )
+
+                    for landmark in left_hand_points:
+
+                        landmarkdata.extend(
+                            [
+                                landmark.x,
+                                landmark.y,
+                                landmark.z
+                            ]
+                        )
+
+                else:
+
+                    landmarkdata.extend(
+                        [0.0] * 63
+                    )
+
+
+                # -------------------------------------------------
+                # RIGHT HAND
+                # -------------------------------------------------
+
+                if (
+                    landmarker_result.right_hand_landmarks
+                    and len(
+                        landmarker_result.right_hand_landmarks
+                    ) > 0
+                ):
+
+                    right_hand_points = (
+                        landmarker_result.right_hand_landmarks[0]
+                        if isinstance(
+                            landmarker_result.right_hand_landmarks[0],
+                            list
+                        )
+                        else
+                        landmarker_result.right_hand_landmarks
+                    )
+
+                    for landmark in right_hand_points:
+
+                        landmarkdata.extend(
+                            [
+                                landmark.x,
+                                landmark.y,
+                                landmark.z
+                            ]
+                        )
+
+                else:
+
+                    landmarkdata.extend(
+                        [0.0] * 63
+                    )
+
+
+                # =================================================
+                # CHECK FEATURE COUNT
+                # =================================================
+
+                if len(landmarkdata) != 225:
+
+                    raise ValueError(
+                        f"Expected 225 features, "
+                        f"got {len(landmarkdata)}"
+                    )
+
+
+                # =================================================
+                # DATAFRAME
+                # =================================================
+
+                self.error_stage = "DataFrame"
+
+                Image_frame_data = pd.DataFrame(
+                    [landmarkdata],
+                    columns=range(225)
+                )
+
+
+                # =================================================
+                # SCALER
+                # =================================================
+
+                self.error_stage = "Scaler"
+
+                scaled_data = scaler.transform(
+                    Image_frame_data
+                )
+
+
+                # =================================================
+                # SCALED DATAFRAME
+                # =================================================
+
+                scaled_dataframe = pd.DataFrame(
+                    scaled_data,
+                    columns=Image_frame_data.columns
+                )
+
+
+                # =================================================
+                # XGBOOST
+                # =================================================
+
+                self.error_stage = "XGBoost prediction"
 
                 numeric_prediction = (
                     xgb_classifier.predict(
@@ -348,24 +323,11 @@ class LandmarkProcessor:
                 )
 
 
-                # ---------------------------------------------
-                # XGBOOST SUCCESS
-                # ---------------------------------------------
+                # =================================================
+                # LABEL DECODER
+                # =================================================
 
-                cv.putText(
-                    img,
-                    "XGBOOST PREDICT OK",
-                    (50, 190),
-                    cv.FONT_HERSHEY_SIMPLEX,
-                    1.0,
-                    (0, 255, 0),
-                    2
-                )
-
-
-                # ---------------------------------------------
-                # DECODE LABEL
-                # ---------------------------------------------
+                self.error_stage = "Label decoding"
 
                 text_prediction = (
                     label_enc.inverse_transform(
@@ -374,90 +336,155 @@ class LandmarkProcessor:
                 )
 
 
+                # =================================================
+                # SUCCESS
+                # =================================================
+
                 self.last_prediction = str(
                     text_prediction[0]
                 )
 
                 self.last_error = ""
+                self.error_stage = ""
 
 
             except Exception as e:
 
-                # ---------------------------------------------
-                # CAPTURE EXACT ERROR
-                # ---------------------------------------------
+                # =================================================
+                # SAVE ERROR PERMANENTLY
+                # =================================================
 
-                error_text = repr(e)
+                error_type = type(e).__name__
+                error_message = str(e)
 
-                self.last_error = error_text
+                self.last_error = (
+                    f"{error_type}: {error_message}"
+                )
+
 
                 self.last_prediction = (
                     "XGBoost ERROR"
                 )
 
 
-                cv.putText(
-                    img,
-                    "XGBOOST ERROR",
-                    (50, 150),
-                    cv.FONT_HERSHEY_SIMPLEX,
-                    1.0,
-                    (0, 0, 255),
-                    2
+                # Print full error to server logs
+                print(
+                    "\n==============================",
+                    flush=True
                 )
-
-
-                # ---------------------------------------------
-                # SHOW ERROR ON VIDEO
-                # ---------------------------------------------
-
-                short_error = error_text[:100]
-
-                cv.putText(
-                    img,
-                    short_error,
-                    (50, 190),
-                    cv.FONT_HERSHEY_SIMPLEX,
-                    0.5,
-                    (0, 0, 255),
-                    2
-                )
-
 
                 print(
-                    "XGBoost error:",
-                    error_text,
+                    "GESTURE RECOGNITION ERROR",
+                    flush=True
+                )
+
+                print(
+                    "Stage:",
+                    self.error_stage,
+                    flush=True
+                )
+
+                print(
+                    "Error type:",
+                    error_type,
+                    flush=True
+                )
+
+                print(
+                    "Error:",
+                    error_message,
+                    flush=True
+                )
+
+                print(
+                    "==============================\n",
                     flush=True
                 )
 
 
         # ====================================================
-        # NON-PROCESSING FRAMES
+        # DISPLAY NORMAL STATUS
         # ====================================================
 
-        else:
+        if self.last_error == "":
 
             cv.putText(
                 img,
                 "Running...",
-                (50, 70),
+                (50, 60),
                 cv.FONT_HERSHEY_SIMPLEX,
-                1.0,
+                0.9,
+                (0, 255, 0),
+                2
+            )
+
+        else:
+
+            # =================================================
+            # DISPLAY ERROR PERMANENTLY
+            # =================================================
+
+            cv.putText(
+                img,
+                "ERROR - CHECK BELOW",
+                (30, 60),
+                cv.FONT_HERSHEY_SIMPLEX,
+                0.9,
+                (0, 0, 255),
+                2
+            )
+
+            cv.putText(
+                img,
+                f"Stage: {self.error_stage}",
+                (30, 100),
+                cv.FONT_HERSHEY_SIMPLEX,
+                0.65,
+                (0, 0, 255),
+                2
+            )
+
+            # Display first part of error
+            error_display = self.last_error[:85]
+
+            cv.putText(
+                img,
+                error_display,
+                (30, 140),
+                cv.FONT_HERSHEY_SIMPLEX,
+                0.55,
+                (0, 0, 255),
+                2
+            )
+
+
+        # ====================================================
+        # LANDMARK COUNT
+        # ====================================================
+
+        if self.last_error == "":
+
+            cv.putText(
+                img,
+                "Landmarks: 225",
+                (30, 100),
+                cv.FONT_HERSHEY_SIMPLEX,
+                0.7,
                 (0, 255, 0),
                 2
             )
 
 
         # ====================================================
-        # SHOW PREDICTION
+        # PREDICTION
         # ====================================================
 
         cv.putText(
             img,
             f"Prediction: {self.last_prediction}",
-            (50, 250),
+            (30, 210),
             cv.FONT_HERSHEY_SIMPLEX,
-            1.2,
+            1.0,
             (0, 255, 0),
             3
         )
