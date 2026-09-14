@@ -1,9 +1,14 @@
+import sys
 import time
+import pickle
 import cv2.headless as cv
+import subprocess
+import pandas as pd
 import mediapipe as mp
 from mediapipe.tasks.python import vision
 from mediapipe.tasks.python import vision
 from mediapipe.tasks.python.vision import drawing_utils
+
 
 
 
@@ -30,6 +35,22 @@ cap = cv.VideoCapture(0)
 ret, frame = cap.read()
 height, width, channels = frame.shape
 
+with open('./Gesture_model.pkl', 'rb') as file:
+    model_pack = pickle.load(file) 
+
+xgb_classifier = model_pack['model']
+scalar = model_pack['scaler']
+label_enc = model_pack['label_encoder']
+
+def Gesture_checker(raw_data):
+    
+    scaled_data = scalar.transform(raw_data)
+    
+    numeric_prediction = xgb_classifier.predict(scaled_data)
+    
+    text_prediction = label_enc.inverse_transform(numeric_prediction)
+    
+    return text_prediction[0]
 
 def draw_landmarks_group(frame, landmarks_list):
     end_pt=None
@@ -40,7 +61,7 @@ def draw_landmarks_group(frame, landmarks_list):
             start_pt = (x, y)
             landmark_coordinates=[landmark.x,landmark.y,landmark.z]
             text=[round(_,3) for _ in landmark_coordinates]
-            cv.putText(frame,str(text),(x,y),cv.FONT_HERSHEY_SIMPLEX,0.25,(0, 255, 0),2)
+            cv.putText(frame,str(text),(x,y),cv.FONT_HERSHEY_SIMPLEX,0.25,(0, 225, 0),2)
             cv.circle(frame, (x, y), 3, (0, 255, 0), -1)      #Draw a tracking node dot
             drawing_utils.draw_landmarks(frame, landmarker_result.pose_landmarks, POSE_GRAPH)
             drawing_utils.draw_landmarks(frame,landmarker_result.left_hand_landmarks,HAND_GRAPH)
@@ -61,15 +82,58 @@ with HolisticLandmarker.create_from_options(options) as landmarker:
         frame_timestamp_ms = int(time.time() * 1000)        #time tracking
 
         landmarker_result = landmarker.detect_for_video(mp_image, frame_timestamp_ms) #landmarker detection
-
+        landmarkdata = []
         if landmarker_result:
             draw_landmarks_group(frame, landmarker_result.left_hand_landmarks)
             draw_landmarks_group(frame, landmarker_result.right_hand_landmarks)            # Draw Hands tracking targets
-            
             draw_landmarks_group(frame, landmarker_result.pose_landmarks)            # Draw Pose skeletal target tracks
             
-            #draw_landmarks_group(frame, landmarker_result.face_landmarks)             # Draw Face structure map
+        if landmarker_result.pose_landmarks and len(landmarker_result.pose_landmarks) > 0:
+            pose_points = (landmarker_result.pose_landmarks[0]
+                            if isinstance(landmarker_result.pose_landmarks[0], list)
+                            else landmarker_result.pose_landmarks
+                            )
+            for landmark in pose_points:
+                landmarkdata.extend([landmark.x, landmark.y, landmark.z])
+        else:
+            landmarkdata.extend([0.0] * (33 * 3))
+
+
+        if landmarker_result.left_hand_landmarks and len(landmarker_result.left_hand_landmarks)>0:
+            left_hand_points=(landmarker_result.left_hand_landmarks[0]
+                              if isinstance(landmarker_result.left_hand_landmarks[0],list)
+                              else landmarker_result.left_hand_landmarks)
+            for landmark in left_hand_points:
+                landmarkdata.extend([landmark.x,landmark.y,landmark.z])
+        else:
+            landmarkdata.extend([0.0] * (21 * 3))
+
+
+        if landmarker_result.right_hand_landmarks and len(landmarker_result.right_hand_landmarks)>0:
+            right_hand_points=(landmarker_result.right_hand_landmarks[0]
+                              if isinstance(landmarker_result.right_hand_landmarks[0],list)
+                              else landmarker_result.right_hand_landmarks)
+            for landmark in right_hand_points:
+                landmarkdata.extend([landmark.x,landmark.y,landmark.z])
+        else:
+            landmarkdata.extend([0.0] * (21 * 3))
+        
+        Image_frame_data = pd.DataFrame([landmarkdata],columns=range(225))
+        result = Gesture_checker(Image_frame_data)
+
+
+        if result==0:
+            text_res="Hello"
+        if result==1:
+            text_res="Thank You"
+        if result==2:
+            text_res="Bye"
+        if result ==3:
+            text_res="Sorry"
+
         cv.imshow('MediaPipe Tasks Tracking', frame)
+        cv.putText(frame,str(text_res),(100,100),cv.FONT_HERSHEY_SIMPLEX,1,(0, 225, 0),2)
+        print(text_res)
 
         if cv.waitKey(1) & 0xFF == ord('q'):
             break

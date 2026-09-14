@@ -12,6 +12,8 @@ import pickle
 df = pd.read_csv('./model_training/gestures/handgestures.csv')
 x = df.drop(df.columns[-1], axis=1)
 y = df.iloc[:, -1:]
+print(df.shape)
+print(df.index)
 print(df)
 
 
@@ -44,6 +46,7 @@ print("Confusion Matrix: \n", confusion_matrix(Y_val,Y_pred))
 model_pack = {'model': xgb_classifier,'scaler': scalar,'label_encoder': label_enc}
 
 
-with open('engine_model_pack.pkl', 'wb') as file:
-    pickle.dump(model_pack, file)
+with open('Gesture_model.pkl', 'wb') as file:
+   pickle.dump(model_pack, file)
+    
 
