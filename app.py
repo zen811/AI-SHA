@@ -11,8 +11,6 @@ from streamlit_webrtc import (
     RTCConfiguration,
 )
 
-from mediapipe.tasks.python import vision
-
 
 # ============================================================
 # STREAMLIT PAGE
@@ -34,10 +32,14 @@ st.title("Sign Language & Gesture Recognition")
 def load_models():
 
     BaseOptions = mp.tasks.BaseOptions
+
     HolisticLandmarkerOptions = (
         mp.tasks.vision.HolisticLandmarkerOptions
     )
-    VisionRunningMode = mp.tasks.vision.RunningMode
+
+    VisionRunningMode = (
+        mp.tasks.vision.RunningMode
+    )
 
     model_path = "./holistic_landmarker.task"
 
@@ -70,29 +72,6 @@ label_enc = model_pack["label_encoder"]
 
 
 # ============================================================
-# XGBOOST COMPATIBILITY
-# ============================================================
-
-try:
-    xgb_classifier.set_params(
-        n_jobs=1
-    )
-except Exception:
-    pass
-
-
-try:
-    if hasattr(
-        xgb_classifier,
-        "use_label_encoder"
-    ):
-        xgb_classifier.use_label_encoder = False
-
-except Exception:
-    pass
-
-
-# ============================================================
 # LANDMARK PROCESSOR
 # ============================================================
 
@@ -107,6 +86,7 @@ class LandmarkProcessor:
 
         self.timestamp_ms = 0
         self.frame_count = 0
+
         self.last_prediction = "Unknown"
         self.last_error = ""
 
@@ -116,10 +96,6 @@ class LandmarkProcessor:
         frame: av.VideoFrame
     ) -> av.VideoFrame:
 
-        # ----------------------------------------------------
-        # COUNT FRAMES
-        # ----------------------------------------------------
-
         self.frame_count += 1
 
         img = frame.to_ndarray(
@@ -127,15 +103,15 @@ class LandmarkProcessor:
         )
 
 
-        # ----------------------------------------------------
-        # RUN EVERY 10TH FRAME
-        # ----------------------------------------------------
+        # ====================================================
+        # PROCESS ONLY EVERY 10TH FRAME
+        # ====================================================
 
         if self.frame_count % 10 == 0:
 
-            # =================================================
+            # ------------------------------------------------
             # BGR -> RGB
-            # =================================================
+            # ------------------------------------------------
 
             rgb_frame = cv.cvtColor(
                 img,
@@ -143,9 +119,9 @@ class LandmarkProcessor:
             )
 
 
-            # =================================================
+            # ------------------------------------------------
             # CREATE MEDIAPIPE IMAGE
-            # =================================================
+            # ------------------------------------------------
 
             mp_image = mp.Image(
                 image_format=mp.ImageFormat.SRGB,
@@ -153,16 +129,16 @@ class LandmarkProcessor:
             )
 
 
-            # =================================================
-            # TIMESTAMP
-            # =================================================
+            # ------------------------------------------------
+            # MONOTONIC TIMESTAMP
+            # ------------------------------------------------
 
             self.timestamp_ms += 33
 
 
-            # =================================================
+            # ------------------------------------------------
             # MEDIAPIPE
-            # =================================================
+            # ------------------------------------------------
 
             landmarker_result = (
                 self.landmarker.detect_for_video(
@@ -173,16 +149,15 @@ class LandmarkProcessor:
 
 
             # =================================================
-            # LANDMARK DATA
+            # LANDMARK EXTRACTION
             # =================================================
 
             landmarkdata = []
 
 
-            # =================================================
-            # POSE
-            # 33 × 3 = 99
-            # =================================================
+            # -------------------------------------------------
+            # POSE - 33 LANDMARKS
+            # -------------------------------------------------
 
             if (
                 landmarker_result.pose_landmarks
@@ -218,10 +193,9 @@ class LandmarkProcessor:
                 )
 
 
-            # =================================================
-            # LEFT HAND
-            # 21 × 3 = 63
-            # =================================================
+            # -------------------------------------------------
+            # LEFT HAND - 21 LANDMARKS
+            # -------------------------------------------------
 
             if (
                 landmarker_result.left_hand_landmarks
@@ -257,10 +231,9 @@ class LandmarkProcessor:
                 )
 
 
-            # =================================================
-            # RIGHT HAND
-            # 21 × 3 = 63
-            # =================================================
+            # -------------------------------------------------
+            # RIGHT HAND - 21 LANDMARKS
+            # -------------------------------------------------
 
             if (
                 landmarker_result.right_hand_landmarks
@@ -297,7 +270,7 @@ class LandmarkProcessor:
 
 
             # =================================================
-            # LANDMARK COUNT
+            # SHOW LANDMARK COUNT
             # =================================================
 
             cv.putText(
@@ -342,7 +315,7 @@ class LandmarkProcessor:
 
 
             # =================================================
-            # KEEP FEATURE NAMES
+            # CREATE SCALED DATAFRAME
             # =================================================
 
             scaled_dataframe = pd.DataFrame(
@@ -352,7 +325,7 @@ class LandmarkProcessor:
 
 
             # =================================================
-            # XGBOOST
+            # XGBOOST PREDICTION
             # =================================================
 
             try:
@@ -368,10 +341,6 @@ class LandmarkProcessor:
                 )
 
 
-                # ---------------------------------------------
-                # RUN PREDICTION
-                # ---------------------------------------------
-
                 numeric_prediction = (
                     xgb_classifier.predict(
                         scaled_dataframe
@@ -380,7 +349,7 @@ class LandmarkProcessor:
 
 
                 # ---------------------------------------------
-                # PREDICTION SUCCESS
+                # XGBOOST SUCCESS
                 # ---------------------------------------------
 
                 cv.putText(
@@ -395,7 +364,7 @@ class LandmarkProcessor:
 
 
                 # ---------------------------------------------
-                # LABEL DECODING
+                # DECODE LABEL
                 # ---------------------------------------------
 
                 text_prediction = (
@@ -414,9 +383,9 @@ class LandmarkProcessor:
 
             except Exception as e:
 
-                # =============================================
-                # SHOW ACTUAL ERROR ON VIDEO
-                # =============================================
+                # ---------------------------------------------
+                # CAPTURE EXACT ERROR
+                # ---------------------------------------------
 
                 error_text = repr(e)
 
@@ -438,7 +407,23 @@ class LandmarkProcessor:
                 )
 
 
-                # Print the complete error
+                # ---------------------------------------------
+                # SHOW ERROR ON VIDEO
+                # ---------------------------------------------
+
+                short_error = error_text[:100]
+
+                cv.putText(
+                    img,
+                    short_error,
+                    (50, 190),
+                    cv.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    (0, 0, 255),
+                    2
+                )
+
+
                 print(
                     "XGBoost error:",
                     error_text,
@@ -446,28 +431,11 @@ class LandmarkProcessor:
                 )
 
 
-                # ------------------------------------------------
-                # Display shortened error on frame
-                # ------------------------------------------------
-
-                short_error = error_text[:90]
-
-                cv.putText(
-                    img,
-                    short_error,
-                    (50, 190),
-                    cv.FONT_HERSHEY_SIMPLEX,
-                    0.55,
-                    (0, 0, 255),
-                    2
-                )
-
+        # ====================================================
+        # NON-PROCESSING FRAMES
+        # ====================================================
 
         else:
-
-            # ------------------------------------------------
-            # BETWEEN INFERENCE FRAMES
-            # ------------------------------------------------
 
             cv.putText(
                 img,
@@ -480,9 +448,9 @@ class LandmarkProcessor:
             )
 
 
-        # =====================================================
-        # CURRENT PREDICTION
-        # =====================================================
+        # ====================================================
+        # SHOW PREDICTION
+        # ====================================================
 
         cv.putText(
             img,
@@ -495,9 +463,9 @@ class LandmarkProcessor:
         )
 
 
-        # =====================================================
+        # ====================================================
         # RETURN FRAME
-        # =====================================================
+        # ====================================================
 
         return av.VideoFrame.from_ndarray(
             img,
@@ -527,6 +495,7 @@ RTC_CONFIGURATION = RTCConfiguration(
 # ============================================================
 
 webrtc_streamer(
+
     key="gesture-detection",
 
     mode=WebRtcMode.SENDRECV,
