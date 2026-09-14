@@ -1,18 +1,6 @@
 import time
 import pickle
 import av
-import ctypes
-
-
-print("=== LIBGL TEST ===")
-
-try:
-    ctypes.CDLL("libGL.so.1")
-    print("SUCCESS: libGL.so.1 exists")
-except OSError as e:
-    print("FAILED: libGL.so.1 is missing")
-    print(e)
-
 import cv2 as cv
 import pandas as pd
 import mediapipe as mp
@@ -63,12 +51,14 @@ def Gesture_checker(raw_data):
 class LandmarkProcessor:
     def __init__(self):
         self.landmarker = mp.tasks.vision.HolisticLandmarker.create_from_options(options)
+        self.timestamp_ms = 0
 
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
         img = frame.to_ndarray(format="bgr24")
         rgb_frame = cv.cvtColor(img, cv.COLOR_BGR2RGB)
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
-        frame_timestamp_ms = int(time.time() * 1000)
+        self.timestamp_ms += 33
+        frame_timestamp_ms = self.timestamp_ms
 
         landmarker_result = self.landmarker.detect_for_video(mp_image, frame_timestamp_ms)
         landmarkdata = []
@@ -127,5 +117,5 @@ webrtc_streamer(
     rtc_configuration=RTC_CONFIGURATION,
     video_processor_factory=LandmarkProcessor,
     media_stream_constraints={"video": True, "audio": False},
-    async_processing=True,
+    async_processing=False,
 )
