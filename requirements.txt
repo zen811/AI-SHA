@@ -1,6 +1,7 @@
-opencv-python-headless
+opencv-python
 pandas
 mediapipe
 xgboost
 pickle
+pyttsx3
 
