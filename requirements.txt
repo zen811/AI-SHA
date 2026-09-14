@@ -1,0 +1,6 @@
+opencv-python-headless
+pandas
+mediapipe
+xgboost
+pickle
+
