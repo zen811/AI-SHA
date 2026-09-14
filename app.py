@@ -92,6 +92,189 @@ except Exception as e:
 
 
 # ============================================================
+# LANDMARK CONNECTIONS
+# ============================================================
+
+# MediaPipe pose connections
+POSE_CONNECTIONS = [
+
+    (0, 1),
+    (1, 2),
+    (2, 3),
+    (3, 7),
+
+    (0, 4),
+    (4, 5),
+    (5, 6),
+    (6, 8),
+
+    (9, 10),
+
+    (11, 12),
+
+    (11, 13),
+    (13, 15),
+    (15, 17),
+    (15, 19),
+    (15, 21),
+
+    (12, 14),
+    (14, 16),
+    (16, 18),
+    (16, 20),
+    (16, 22),
+
+    (11, 23),
+    (12, 24),
+
+    (23, 24),
+
+    (23, 25),
+    (25, 27),
+    (27, 29),
+    (29, 31),
+
+    (24, 26),
+    (26, 28),
+    (28, 30),
+    (30, 32),
+
+    (27, 31),
+    (28, 32),
+]
+
+
+# MediaPipe hand connections
+HAND_CONNECTIONS = [
+
+    # Thumb
+    (0, 1),
+    (1, 2),
+    (2, 3),
+    (3, 4),
+
+    # Index finger
+    (0, 5),
+    (5, 6),
+    (6, 7),
+    (7, 8),
+
+    # Middle finger
+    (0, 9),
+    (9, 10),
+    (10, 11),
+    (11, 12),
+
+    # Ring finger
+    (0, 13),
+    (13, 14),
+    (14, 15),
+    (15, 16),
+
+    # Pinky
+    (0, 17),
+    (17, 18),
+    (18, 19),
+    (19, 20),
+
+    # Palm
+    (5, 9),
+    (9, 13),
+    (13, 17),
+]
+
+
+# ============================================================
+# DRAW LANDMARKS
+# ============================================================
+
+def draw_landmarks(
+    img,
+    landmarks,
+    connections
+):
+
+    if not landmarks:
+        return
+
+    height, width = img.shape[:2]
+
+    points = []
+
+    for landmark in landmarks:
+
+        x = int(
+            landmark.x * width
+        )
+
+        y = int(
+            landmark.y * height
+        )
+
+        points.append(
+            (x, y)
+        )
+
+
+    # --------------------------------------------------------
+    # DRAW CONNECTION LINES
+    # --------------------------------------------------------
+
+    for start, end in connections:
+
+        if (
+            start >= len(points)
+            or end >= len(points)
+        ):
+            continue
+
+        x1, y1 = points[start]
+        x2, y2 = points[end]
+
+        # Only draw points that are inside/near the frame
+        if (
+            -50 <= x1 <= width + 50
+            and
+            -50 <= y1 <= height + 50
+            and
+            -50 <= x2 <= width + 50
+            and
+            -50 <= y2 <= height + 50
+        ):
+
+            cv.line(
+                img,
+                (x1, y1),
+                (x2, y2),
+                (0, 255, 255),
+                2,
+                cv.LINE_AA
+            )
+
+
+    # --------------------------------------------------------
+    # DRAW LANDMARK POINTS
+    # --------------------------------------------------------
+
+    for x, y in points:
+
+        if (
+            0 <= x < width
+            and
+            0 <= y < height
+        ):
+
+            cv.circle(
+                img,
+                (x, y),
+                3,
+                (0, 255, 0),
+                -1,
+                cv.LINE_AA
+            )
+
+
+# ============================================================
 # LANDMARK PROCESSOR
 # ============================================================
 
@@ -111,6 +294,13 @@ class LandmarkProcessor:
 
         self.last_error = ""
         self.error_stage = ""
+
+        # Store the most recently detected landmarks
+        # so that the skeleton remains visible between
+        # MediaPipe processing frames.
+        self.last_pose_landmarks = []
+        self.last_left_hand_landmarks = []
+        self.last_right_hand_landmarks = []
 
         self.xgb_attribute_status = (
             hasattr(
@@ -178,6 +368,92 @@ class LandmarkProcessor:
                         self.timestamp_ms
                     )
                 )
+
+
+                # =================================================
+                # SAVE LANDMARKS FOR DISPLAY
+                # =================================================
+
+                self.error_stage = (
+                    "Landmark display"
+                )
+
+                # -------------------------------------------------
+                # POSE LANDMARKS
+                # -------------------------------------------------
+
+                if (
+                    landmarker_result.pose_landmarks
+                    and len(
+                        landmarker_result.pose_landmarks
+                    ) > 0
+                ):
+
+                    self.last_pose_landmarks = (
+                        landmarker_result.pose_landmarks[0]
+                        if isinstance(
+                            landmarker_result.pose_landmarks[0],
+                            list
+                        )
+                        else
+                        landmarker_result.pose_landmarks
+                    )
+
+                else:
+
+                    self.last_pose_landmarks = []
+
+
+                # -------------------------------------------------
+                # LEFT HAND LANDMARKS
+                # -------------------------------------------------
+
+                if (
+                    landmarker_result.left_hand_landmarks
+                    and len(
+                        landmarker_result.left_hand_landmarks
+                    ) > 0
+                ):
+
+                    self.last_left_hand_landmarks = (
+                        landmarker_result.left_hand_landmarks[0]
+                        if isinstance(
+                            landmarker_result.left_hand_landmarks[0],
+                            list
+                        )
+                        else
+                        landmarker_result.left_hand_landmarks
+                    )
+
+                else:
+
+                    self.last_left_hand_landmarks = []
+
+
+                # -------------------------------------------------
+                # RIGHT HAND LANDMARKS
+                # -------------------------------------------------
+
+                if (
+                    landmarker_result.right_hand_landmarks
+                    and len(
+                        landmarker_result.right_hand_landmarks
+                    ) > 0
+                ):
+
+                    self.last_right_hand_landmarks = (
+                        landmarker_result.right_hand_landmarks[0]
+                        if isinstance(
+                            landmarker_result.right_hand_landmarks[0],
+                            list
+                        )
+                        else
+                        landmarker_result.right_hand_landmarks
+                    )
+
+                else:
+
+                    self.last_right_hand_landmarks = []
 
 
                 # =================================================
@@ -535,6 +811,34 @@ class LandmarkProcessor:
                     "================================\n",
                     flush=True
                 )
+
+
+        # ====================================================
+        # DRAW MODEL SKELETON
+        # ====================================================
+
+        # Draw the most recently detected pose.
+        draw_landmarks(
+            img,
+            self.last_pose_landmarks,
+            POSE_CONNECTIONS
+        )
+
+
+        # Draw left hand.
+        draw_landmarks(
+            img,
+            self.last_left_hand_landmarks,
+            HAND_CONNECTIONS
+        )
+
+
+        # Draw right hand.
+        draw_landmarks(
+            img,
+            self.last_right_hand_landmarks,
+            HAND_CONNECTIONS
+        )
 
 
         # ====================================================
