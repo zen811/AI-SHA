@@ -14,6 +14,10 @@ from streamlit_webrtc import (
 from mediapipe.tasks.python import vision
 
 
+# ============================================================
+# STREAMLIT PAGE
+# ============================================================
+
 st.set_page_config(
     page_title="Real-time Gesture Recognition",
     layout="wide"
@@ -30,7 +34,9 @@ st.title("Sign Language & Gesture Recognition")
 def load_models():
 
     BaseOptions = mp.tasks.BaseOptions
-    HolisticLandmarkerOptions = mp.tasks.vision.HolisticLandmarkerOptions
+    HolisticLandmarkerOptions = (
+        mp.tasks.vision.HolisticLandmarkerOptions
+    )
     VisionRunningMode = mp.tasks.vision.RunningMode
 
     model_path = "./holistic_landmarker.task"
@@ -64,10 +70,9 @@ label_enc = model_pack["label_encoder"]
 
 
 # ============================================================
-# XGBOOST COMPATIBILITY SETTINGS
+# XGBOOST COMPATIBILITY
 # ============================================================
 
-# Limit XGBoost to one CPU thread.
 try:
     xgb_classifier.set_params(
         n_jobs=1
@@ -76,7 +81,6 @@ except Exception:
     pass
 
 
-# Compatibility with models created using older XGBoost versions.
 try:
     if hasattr(
         xgb_classifier,
@@ -97,15 +101,14 @@ class LandmarkProcessor:
     def __init__(self):
 
         self.landmarker = (
-            mp.tasks.vision.HolisticLandmarker.create_from_options(
-                options
-            )
+            mp.tasks.vision.HolisticLandmarker
+            .create_from_options(options)
         )
 
         self.timestamp_ms = 0
         self.frame_count = 0
-
         self.last_prediction = "Unknown"
+        self.last_error = ""
 
 
     def recv(
@@ -114,7 +117,7 @@ class LandmarkProcessor:
     ) -> av.VideoFrame:
 
         # ----------------------------------------------------
-        # FRAME COUNT
+        # COUNT FRAMES
         # ----------------------------------------------------
 
         self.frame_count += 1
@@ -125,32 +128,41 @@ class LandmarkProcessor:
 
 
         # ----------------------------------------------------
-        # RUN INFERENCE EVERY 10TH FRAME
+        # RUN EVERY 10TH FRAME
         # ----------------------------------------------------
 
         if self.frame_count % 10 == 0:
 
-            # Convert BGR -> RGB
+            # =================================================
+            # BGR -> RGB
+            # =================================================
+
             rgb_frame = cv.cvtColor(
                 img,
                 cv.COLOR_BGR2RGB
             )
 
 
-            # Create MediaPipe image
+            # =================================================
+            # CREATE MEDIAPIPE IMAGE
+            # =================================================
+
             mp_image = mp.Image(
                 image_format=mp.ImageFormat.SRGB,
                 data=rgb_frame
             )
 
 
-            # MediaPipe requires increasing timestamps
+            # =================================================
+            # TIMESTAMP
+            # =================================================
+
             self.timestamp_ms += 33
 
 
-            # ------------------------------------------------
-            # MEDIAPIPE HOLISTIC
-            # ------------------------------------------------
+            # =================================================
+            # MEDIAPIPE
+            # =================================================
 
             landmarker_result = (
                 self.landmarker.detect_for_video(
@@ -160,15 +172,16 @@ class LandmarkProcessor:
             )
 
 
-            # ------------------------------------------------
-            # EXTRACT LANDMARKS
-            # ------------------------------------------------
+            # =================================================
+            # LANDMARK DATA
+            # =================================================
 
             landmarkdata = []
 
 
             # =================================================
             # POSE
+            # 33 × 3 = 99
             # =================================================
 
             if (
@@ -207,6 +220,7 @@ class LandmarkProcessor:
 
             # =================================================
             # LEFT HAND
+            # 21 × 3 = 63
             # =================================================
 
             if (
@@ -245,6 +259,7 @@ class LandmarkProcessor:
 
             # =================================================
             # RIGHT HAND
+            # 21 × 3 = 63
             # =================================================
 
             if (
@@ -281,9 +296,9 @@ class LandmarkProcessor:
                 )
 
 
-            # ------------------------------------------------
-            # VERIFY LANDMARK COUNT
-            # ------------------------------------------------
+            # =================================================
+            # LANDMARK COUNT
+            # =================================================
 
             cv.putText(
                 img,
@@ -307,7 +322,7 @@ class LandmarkProcessor:
 
 
             # =================================================
-            # SCALE DATA
+            # SCALER
             # =================================================
 
             scaled_data = scaler.transform(
@@ -327,7 +342,17 @@ class LandmarkProcessor:
 
 
             # =================================================
-            # XGBOOST PREDICTION
+            # KEEP FEATURE NAMES
+            # =================================================
+
+            scaled_dataframe = pd.DataFrame(
+                scaled_data,
+                columns=Image_frame_data.columns
+            )
+
+
+            # =================================================
+            # XGBOOST
             # =================================================
 
             try:
@@ -343,15 +368,21 @@ class LandmarkProcessor:
                 )
 
 
-                # Run prediction
+                # ---------------------------------------------
+                # RUN PREDICTION
+                # ---------------------------------------------
+
                 numeric_prediction = (
                     xgb_classifier.predict(
-                        scaled_data
+                        scaled_dataframe
                     )
                 )
 
 
-                # Prediction succeeded
+                # ---------------------------------------------
+                # PREDICTION SUCCESS
+                # ---------------------------------------------
+
                 cv.putText(
                     img,
                     "XGBOOST PREDICT OK",
@@ -363,8 +394,10 @@ class LandmarkProcessor:
                 )
 
 
-                # Convert numeric prediction
-                # into the original class label
+                # ---------------------------------------------
+                # LABEL DECODING
+                # ---------------------------------------------
+
                 text_prediction = (
                     label_enc.inverse_transform(
                         numeric_prediction
@@ -376,8 +409,18 @@ class LandmarkProcessor:
                     text_prediction[0]
                 )
 
+                self.last_error = ""
+
 
             except Exception as e:
+
+                # =============================================
+                # SHOW ACTUAL ERROR ON VIDEO
+                # =============================================
+
+                error_text = repr(e)
+
+                self.last_error = error_text
 
                 self.last_prediction = (
                     "XGBoost ERROR"
@@ -395,13 +438,36 @@ class LandmarkProcessor:
                 )
 
 
+                # Print the complete error
                 print(
                     "XGBoost error:",
-                    repr(e)
+                    error_text,
+                    flush=True
+                )
+
+
+                # ------------------------------------------------
+                # Display shortened error on frame
+                # ------------------------------------------------
+
+                short_error = error_text[:90]
+
+                cv.putText(
+                    img,
+                    short_error,
+                    (50, 190),
+                    cv.FONT_HERSHEY_SIMPLEX,
+                    0.55,
+                    (0, 0, 255),
+                    2
                 )
 
 
         else:
+
+            # ------------------------------------------------
+            # BETWEEN INFERENCE FRAMES
+            # ------------------------------------------------
 
             cv.putText(
                 img,
@@ -415,7 +481,7 @@ class LandmarkProcessor:
 
 
         # =====================================================
-        # DISPLAY PREDICTION
+        # CURRENT PREDICTION
         # =====================================================
 
         cv.putText(
