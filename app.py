@@ -1,4 +1,3 @@
-import time
 import pickle
 import av
 import cv2 as cv
@@ -13,12 +12,7 @@ from streamlit_webrtc import (
 )
 
 from mediapipe.tasks.python import vision
-from mediapipe.tasks.python.vision import drawing_utils
 
-
-# --------------------------------------------------
-# STREAMLIT PAGE
-# --------------------------------------------------
 
 st.set_page_config(
     page_title="Real-time Gesture Recognition",
@@ -28,9 +22,9 @@ st.set_page_config(
 st.title("Sign Language & Gesture Recognition")
 
 
-# --------------------------------------------------
-# 1. LOAD ML MODEL & MEDIAPIPE OPTIONS
-# --------------------------------------------------
+# ============================================================
+# LOAD MODELS
+# ============================================================
 
 @st.cache_resource
 def load_models():
@@ -59,33 +53,44 @@ def load_models():
 
 options, model_pack = load_models()
 
+
+# ============================================================
+# EXTRACT SAVED MODELS
+# ============================================================
+
 xgb_classifier = model_pack["model"]
 scaler = model_pack["scaler"]
 label_enc = model_pack["label_encoder"]
 
 
-# --------------------------------------------------
-# IMPORTANT:
-# LIMIT XGBOOST TO ONE CPU THREAD
-# --------------------------------------------------
+# ============================================================
+# XGBOOST COMPATIBILITY SETTINGS
+# ============================================================
 
+# Limit XGBoost to one CPU thread.
 try:
-    xgb_classifier.set_params(n_jobs=1)
+    xgb_classifier.set_params(
+        n_jobs=1
+    )
 except Exception:
     pass
 
 
-# --------------------------------------------------
-# MEDIAPIPE DRAWING CONNECTIONS
-# --------------------------------------------------
+# Compatibility with models created using older XGBoost versions.
+try:
+    if hasattr(
+        xgb_classifier,
+        "use_label_encoder"
+    ):
+        xgb_classifier.use_label_encoder = False
 
-POSE_GRAPH = vision.PoseLandmarksConnections.POSE_LANDMARKS
-HAND_GRAPH = vision.HandLandmarksConnections.HAND_CONNECTIONS
+except Exception:
+    pass
 
 
-# --------------------------------------------------
-# 2. WEBRTC VIDEO PROCESSOR
-# --------------------------------------------------
+# ============================================================
+# LANDMARK PROCESSOR
+# ============================================================
 
 class LandmarkProcessor:
 
@@ -103,11 +108,14 @@ class LandmarkProcessor:
         self.last_prediction = "Unknown"
 
 
-    def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
+    def recv(
+        self,
+        frame: av.VideoFrame
+    ) -> av.VideoFrame:
 
-        # --------------------------------------------------
-        # COUNT FRAMES
-        # --------------------------------------------------
+        # ----------------------------------------------------
+        # FRAME COUNT
+        # ----------------------------------------------------
 
         self.frame_count += 1
 
@@ -116,42 +124,33 @@ class LandmarkProcessor:
         )
 
 
-        # --------------------------------------------------
-        # PROCESS EVERY 10TH FRAME
-        # --------------------------------------------------
+        # ----------------------------------------------------
+        # RUN INFERENCE EVERY 10TH FRAME
+        # ----------------------------------------------------
 
         if self.frame_count % 10 == 0:
 
-            # --------------------------------------------------
-            # BGR -> RGB
-            # --------------------------------------------------
-
+            # Convert BGR -> RGB
             rgb_frame = cv.cvtColor(
                 img,
                 cv.COLOR_BGR2RGB
             )
 
 
-            # --------------------------------------------------
-            # CREATE MEDIAPIPE IMAGE
-            # --------------------------------------------------
-
+            # Create MediaPipe image
             mp_image = mp.Image(
                 image_format=mp.ImageFormat.SRGB,
                 data=rgb_frame
             )
 
 
-            # --------------------------------------------------
-            # TIMESTAMP
-            # --------------------------------------------------
-
+            # MediaPipe requires increasing timestamps
             self.timestamp_ms += 33
 
 
-            # --------------------------------------------------
-            # MEDIAPIPE
-            # --------------------------------------------------
+            # ------------------------------------------------
+            # MEDIAPIPE HOLISTIC
+            # ------------------------------------------------
 
             landmarker_result = (
                 self.landmarker.detect_for_video(
@@ -161,21 +160,22 @@ class LandmarkProcessor:
             )
 
 
-            # --------------------------------------------------
-            # CREATE LANDMARK DATA
-            # --------------------------------------------------
+            # ------------------------------------------------
+            # EXTRACT LANDMARKS
+            # ------------------------------------------------
 
             landmarkdata = []
 
 
-            # ==================================================
+            # =================================================
             # POSE
-            # 33 × 3 = 99
-            # ==================================================
+            # =================================================
 
             if (
                 landmarker_result.pose_landmarks
-                and len(landmarker_result.pose_landmarks) > 0
+                and len(
+                    landmarker_result.pose_landmarks
+                ) > 0
             ):
 
                 pose_points = (
@@ -184,16 +184,19 @@ class LandmarkProcessor:
                         landmarker_result.pose_landmarks[0],
                         list
                     )
-                    else landmarker_result.pose_landmarks
+                    else
+                    landmarker_result.pose_landmarks
                 )
 
                 for landmark in pose_points:
 
-                    landmarkdata.extend([
-                        landmark.x,
-                        landmark.y,
-                        landmark.z
-                    ])
+                    landmarkdata.extend(
+                        [
+                            landmark.x,
+                            landmark.y,
+                            landmark.z
+                        ]
+                    )
 
             else:
 
@@ -202,14 +205,15 @@ class LandmarkProcessor:
                 )
 
 
-            # ==================================================
+            # =================================================
             # LEFT HAND
-            # 21 × 3 = 63
-            # ==================================================
+            # =================================================
 
             if (
                 landmarker_result.left_hand_landmarks
-                and len(landmarker_result.left_hand_landmarks) > 0
+                and len(
+                    landmarker_result.left_hand_landmarks
+                ) > 0
             ):
 
                 left_hand_points = (
@@ -218,16 +222,19 @@ class LandmarkProcessor:
                         landmarker_result.left_hand_landmarks[0],
                         list
                     )
-                    else landmarker_result.left_hand_landmarks
+                    else
+                    landmarker_result.left_hand_landmarks
                 )
 
                 for landmark in left_hand_points:
 
-                    landmarkdata.extend([
-                        landmark.x,
-                        landmark.y,
-                        landmark.z
-                    ])
+                    landmarkdata.extend(
+                        [
+                            landmark.x,
+                            landmark.y,
+                            landmark.z
+                        ]
+                    )
 
             else:
 
@@ -236,14 +243,15 @@ class LandmarkProcessor:
                 )
 
 
-            # ==================================================
+            # =================================================
             # RIGHT HAND
-            # 21 × 3 = 63
-            # ==================================================
+            # =================================================
 
             if (
                 landmarker_result.right_hand_landmarks
-                and len(landmarker_result.right_hand_landmarks) > 0
+                and len(
+                    landmarker_result.right_hand_landmarks
+                ) > 0
             ):
 
                 right_hand_points = (
@@ -252,16 +260,19 @@ class LandmarkProcessor:
                         landmarker_result.right_hand_landmarks[0],
                         list
                     )
-                    else landmarker_result.right_hand_landmarks
+                    else
+                    landmarker_result.right_hand_landmarks
                 )
 
                 for landmark in right_hand_points:
 
-                    landmarkdata.extend([
-                        landmark.x,
-                        landmark.y,
-                        landmark.z
-                    ])
+                    landmarkdata.extend(
+                        [
+                            landmark.x,
+                            landmark.y,
+                            landmark.z
+                        ]
+                    )
 
             else:
 
@@ -270,9 +281,9 @@ class LandmarkProcessor:
                 )
 
 
-            # --------------------------------------------------
+            # ------------------------------------------------
             # VERIFY LANDMARK COUNT
-            # --------------------------------------------------
+            # ------------------------------------------------
 
             cv.putText(
                 img,
@@ -285,9 +296,9 @@ class LandmarkProcessor:
             )
 
 
-            # --------------------------------------------------
+            # =================================================
             # CREATE DATAFRAME
-            # --------------------------------------------------
+            # =================================================
 
             Image_frame_data = pd.DataFrame(
                 [landmarkdata],
@@ -295,9 +306,9 @@ class LandmarkProcessor:
             )
 
 
-            # --------------------------------------------------
-            # SCALER
-            # --------------------------------------------------
+            # =================================================
+            # SCALE DATA
+            # =================================================
 
             scaled_data = scaler.transform(
                 Image_frame_data
@@ -315,12 +326,24 @@ class LandmarkProcessor:
             )
 
 
-            # --------------------------------------------------
+            # =================================================
             # XGBOOST PREDICTION
-            # --------------------------------------------------
+            # =================================================
 
             try:
 
+                cv.putText(
+                    img,
+                    "PREDICTING...",
+                    (50, 150),
+                    cv.FONT_HERSHEY_SIMPLEX,
+                    1.0,
+                    (0, 255, 255),
+                    2
+                )
+
+
+                # Run prediction
                 numeric_prediction = (
                     xgb_classifier.predict(
                         scaled_data
@@ -328,29 +351,11 @@ class LandmarkProcessor:
                 )
 
 
-                # --------------------------------------------------
-                # LABEL ENCODER
-                # --------------------------------------------------
-
-                text_prediction = (
-                    label_enc.inverse_transform(
-                        numeric_prediction
-                    )
-                )
-
-                self.last_prediction = str(
-                    text_prediction[0]
-                )
-
-
-                # --------------------------------------------------
-                # XGBOOST SUCCESS
-                # --------------------------------------------------
-
+                # Prediction succeeded
                 cv.putText(
                     img,
-                    "XGBOOST OK",
-                    (50, 150),
+                    "XGBOOST PREDICT OK",
+                    (50, 190),
                     cv.FONT_HERSHEY_SIMPLEX,
                     1.0,
                     (0, 255, 0),
@@ -358,9 +363,26 @@ class LandmarkProcessor:
                 )
 
 
+                # Convert numeric prediction
+                # into the original class label
+                text_prediction = (
+                    label_enc.inverse_transform(
+                        numeric_prediction
+                    )
+                )
+
+
+                self.last_prediction = str(
+                    text_prediction[0]
+                )
+
+
             except Exception as e:
 
-                self.last_prediction = "XGBoost ERROR"
+                self.last_prediction = (
+                    "XGBoost ERROR"
+                )
+
 
                 cv.putText(
                     img,
@@ -371,6 +393,7 @@ class LandmarkProcessor:
                     (0, 0, 255),
                     2
                 )
+
 
                 print(
                     "XGBoost error:",
@@ -391,14 +414,14 @@ class LandmarkProcessor:
             )
 
 
-        # --------------------------------------------------
-        # SHOW CURRENT PREDICTION
-        # --------------------------------------------------
+        # =====================================================
+        # DISPLAY PREDICTION
+        # =====================================================
 
         cv.putText(
             img,
             f"Prediction: {self.last_prediction}",
-            (50, 210),
+            (50, 250),
             cv.FONT_HERSHEY_SIMPLEX,
             1.2,
             (0, 255, 0),
@@ -406,9 +429,9 @@ class LandmarkProcessor:
         )
 
 
-        # --------------------------------------------------
+        # =====================================================
         # RETURN FRAME
-        # --------------------------------------------------
+        # =====================================================
 
         return av.VideoFrame.from_ndarray(
             img,
@@ -416,9 +439,9 @@ class LandmarkProcessor:
         )
 
 
-# --------------------------------------------------
-# 3. WEBRTC CONFIGURATION
-# --------------------------------------------------
+# ============================================================
+# WEBRTC CONFIGURATION
+# ============================================================
 
 RTC_CONFIGURATION = RTCConfiguration(
     {
@@ -433,12 +456,11 @@ RTC_CONFIGURATION = RTCConfiguration(
 )
 
 
-# --------------------------------------------------
-# 4. START CAMERA
-# --------------------------------------------------
+# ============================================================
+# START WEBRTC
+# ============================================================
 
 webrtc_streamer(
-
     key="gesture-detection",
 
     mode=WebRtcMode.SENDRECV,
@@ -448,23 +470,18 @@ webrtc_streamer(
     video_processor_factory=LandmarkProcessor,
 
     media_stream_constraints={
-
         "video": {
-
             "width": {
                 "ideal": 640
             },
-
             "height": {
                 "ideal": 480
             },
-
             "frameRate": {
                 "ideal": 15,
                 "max": 20
             },
         },
-
         "audio": False,
     },
 
