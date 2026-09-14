@@ -132,7 +132,7 @@ with HolisticLandmarker.create_from_options(options) as landmarker:
             text_res="Bye"
 
         cv.imshow('MediaPipe Tasks Tracking', frame)
-        cv.putText(frame,"str(text_res)")
+        cv.putText(frame,"str(text_res)",(0,0),(0,255,0),cv.FONT_HERSHEY_SIMPLEX,(0,255,0),2)
         print(text_res)
 
         if cv.waitKey(1) & 0xFF == ord('q'):
