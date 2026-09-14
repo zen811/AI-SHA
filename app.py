@@ -1,6 +1,16 @@
 import time
 import pickle
 import av
+
+print("=== LIBGL TEST ===")
+
+try:
+    ctypes.CDLL("libGL.so.1")
+    print("SUCCESS: libGL.so.1 exists")
+except OSError as e:
+    print("FAILED: libGL.so.1 is missing")
+    print(e)
+
 import cv2 as cv
 import pandas as pd
 import mediapipe as mp
