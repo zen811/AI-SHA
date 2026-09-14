@@ -17,11 +17,11 @@ from streamlit_webrtc import (
 # ============================================================
 
 st.set_page_config(
-    page_title="Real-time Gesture Recognition",
+    page_title="AI-SHA",
     layout="wide"
 )
 
-st.title("Sign Language & Gesture Recognition")
+st.title("AI-SHA")
 
 
 # ============================================================
@@ -549,16 +549,6 @@ class LandmarkProcessor:
                 (30, 60),
                 cv.FONT_HERSHEY_SIMPLEX,
                 0.9,
-                (0, 255, 0),
-                2
-            )
-
-            cv.putText(
-                img,
-                "XGBoost attributes: OK",
-                (30, 100),
-                cv.FONT_HERSHEY_SIMPLEX,
-                0.65,
                 (0, 255, 0),
                 2
             )
