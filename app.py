@@ -91,7 +91,7 @@ class LandmarkProcessor:
                 )
 
                 for landmark in pose_points:
-                    andmarkdata.extend([
+                    landmarkdata.extend([
                         landmark.x,
                         landmark.y,
                         landmark.z
