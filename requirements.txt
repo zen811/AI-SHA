@@ -1,6 +1,12 @@
-opencv-python
+streamlit
+streamlit-webrtc
+opencv-python-headless
 pandas
 mediapipe
 xgboost
+<<<<<<< Updated upstream
 streamlit
 
+=======
+av
+>>>>>>> Stashed changes
