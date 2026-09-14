@@ -106,6 +106,10 @@ class LandmarkProcessor:
             text_res = "Hello"
         elif result == 1:
             text_res = "Thank You"
+        elif result == 2:
+            text_res = "Sorry"
+        elif result == 3:
+            text_res = "Bye"
 
         # Draw Output on Frame
         cv.putText(img, str(text_res), (50, 80), cv.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 3)
