@@ -50,7 +50,6 @@ def Gesture_checker(raw_data):
 # 2. WebRTC Video Processor Class
 class LandmarkProcessor:
     def __init__(self):
-        def __init__(self):
         self.landmarker = mp.tasks.vision.HolisticLandmarker.create_from_options(options)
         self.timestamp_ms = 0
         self.frame_count = 0
