@@ -11,7 +11,7 @@ for pkg in ["requests", "pandas","opencv-python","mediapipe","xgboost","scikit_l
     
 import time
 import pickle
-import cv2 as cv
+import cv2.headless as cv
 import subprocess
 import pandas as pd
 import mediapipe as mp
