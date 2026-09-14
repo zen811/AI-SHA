@@ -10,8 +10,6 @@ from mediapipe.tasks.python import vision
 from mediapipe.tasks.python.vision import drawing_utils
 
 
-for pkg in ["requests", "pandas","opencv-python","mediapipe","xgboost","scikit_learn"]:
-    install_and_import(pkg)
 
 
 BaseOptions = mp.tasks.BaseOptions
