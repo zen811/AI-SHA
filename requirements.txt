@@ -3,4 +3,5 @@ pandas
 mediapipe
 xgboost
 pickle
+pyttsx3
 
