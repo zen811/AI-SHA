@@ -65,6 +65,17 @@ label_enc = model_pack["label_encoder"]
 
 
 # --------------------------------------------------
+# IMPORTANT:
+# LIMIT XGBOOST TO ONE CPU THREAD
+# --------------------------------------------------
+
+try:
+    xgb_classifier.set_params(n_jobs=1)
+except Exception:
+    pass
+
+
+# --------------------------------------------------
 # MEDIAPIPE DRAWING CONNECTIONS
 # --------------------------------------------------
 
@@ -94,32 +105,47 @@ class LandmarkProcessor:
 
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
 
-        # Count incoming frames
+        # --------------------------------------------------
+        # COUNT FRAMES
+        # --------------------------------------------------
+
         self.frame_count += 1
 
-        # Convert frame to OpenCV image
-        img = frame.to_ndarray(format="bgr24")
+        img = frame.to_ndarray(
+            format="bgr24"
+        )
 
 
         # --------------------------------------------------
-        # PROCESS ONLY EVERY 10TH FRAME
+        # PROCESS EVERY 10TH FRAME
         # --------------------------------------------------
 
         if self.frame_count % 10 == 0:
 
+            # --------------------------------------------------
             # BGR -> RGB
+            # --------------------------------------------------
+
             rgb_frame = cv.cvtColor(
                 img,
                 cv.COLOR_BGR2RGB
             )
 
-            # Create MediaPipe image
+
+            # --------------------------------------------------
+            # CREATE MEDIAPIPE IMAGE
+            # --------------------------------------------------
+
             mp_image = mp.Image(
                 image_format=mp.ImageFormat.SRGB,
                 data=rgb_frame
             )
 
-            # Increasing timestamp
+
+            # --------------------------------------------------
+            # TIMESTAMP
+            # --------------------------------------------------
+
             self.timestamp_ms += 33
 
 
@@ -136,16 +162,16 @@ class LandmarkProcessor:
 
 
             # --------------------------------------------------
-            # CREATE 225 LANDMARK FEATURES
+            # CREATE LANDMARK DATA
             # --------------------------------------------------
 
             landmarkdata = []
 
 
-            # --------------------------------------------------
+            # ==================================================
             # POSE
-            # 33 landmarks × 3 = 99
-            # --------------------------------------------------
+            # 33 × 3 = 99
+            # ==================================================
 
             if (
                 landmarker_result.pose_landmarks
@@ -171,13 +197,15 @@ class LandmarkProcessor:
 
             else:
 
-                landmarkdata.extend([0.0] * 99)
+                landmarkdata.extend(
+                    [0.0] * 99
+                )
 
 
-            # --------------------------------------------------
+            # ==================================================
             # LEFT HAND
-            # 21 landmarks × 3 = 63
-            # --------------------------------------------------
+            # 21 × 3 = 63
+            # ==================================================
 
             if (
                 landmarker_result.left_hand_landmarks
@@ -203,13 +231,15 @@ class LandmarkProcessor:
 
             else:
 
-                landmarkdata.extend([0.0] * 63)
+                landmarkdata.extend(
+                    [0.0] * 63
+                )
 
 
-            # --------------------------------------------------
+            # ==================================================
             # RIGHT HAND
-            # 21 landmarks × 3 = 63
-            # --------------------------------------------------
+            # 21 × 3 = 63
+            # ==================================================
 
             if (
                 landmarker_result.right_hand_landmarks
@@ -235,26 +265,28 @@ class LandmarkProcessor:
 
             else:
 
-                landmarkdata.extend([0.0] * 63)
+                landmarkdata.extend(
+                    [0.0] * 63
+                )
 
 
             # --------------------------------------------------
-            # VERIFY 225 FEATURES
+            # VERIFY LANDMARK COUNT
             # --------------------------------------------------
 
             cv.putText(
                 img,
                 f"Landmarks: {len(landmarkdata)}",
-                (50, 80),
+                (50, 70),
                 cv.FONT_HERSHEY_SIMPLEX,
-                1.2,
+                1.0,
                 (0, 255, 0),
-                3
+                2
             )
 
 
             # --------------------------------------------------
-            # TEST SCALER ONLY
+            # CREATE DATAFRAME
             # --------------------------------------------------
 
             Image_frame_data = pd.DataFrame(
@@ -263,40 +295,115 @@ class LandmarkProcessor:
             )
 
 
-            # IMPORTANT:
-            # We are testing ONLY scaler.transform()
-            # XGBoost prediction is NOT being called yet.
+            # --------------------------------------------------
+            # SCALER
+            # --------------------------------------------------
 
             scaled_data = scaler.transform(
                 Image_frame_data
             )
 
 
-            # --------------------------------------------------
-            # SCALER SUCCESS
-            # --------------------------------------------------
-
             cv.putText(
                 img,
                 "SCALER OK",
-                (50, 130),
+                (50, 110),
                 cv.FONT_HERSHEY_SIMPLEX,
-                1.2,
+                1.0,
                 (0, 255, 0),
-                3
+                2
             )
+
+
+            # --------------------------------------------------
+            # XGBOOST PREDICTION
+            # --------------------------------------------------
+
+            try:
+
+                numeric_prediction = (
+                    xgb_classifier.predict(
+                        scaled_data
+                    )
+                )
+
+
+                # --------------------------------------------------
+                # LABEL ENCODER
+                # --------------------------------------------------
+
+                text_prediction = (
+                    label_enc.inverse_transform(
+                        numeric_prediction
+                    )
+                )
+
+                self.last_prediction = str(
+                    text_prediction[0]
+                )
+
+
+                # --------------------------------------------------
+                # XGBOOST SUCCESS
+                # --------------------------------------------------
+
+                cv.putText(
+                    img,
+                    "XGBOOST OK",
+                    (50, 150),
+                    cv.FONT_HERSHEY_SIMPLEX,
+                    1.0,
+                    (0, 255, 0),
+                    2
+                )
+
+
+            except Exception as e:
+
+                self.last_prediction = "XGBoost ERROR"
+
+                cv.putText(
+                    img,
+                    "XGBOOST ERROR",
+                    (50, 150),
+                    cv.FONT_HERSHEY_SIMPLEX,
+                    1.0,
+                    (0, 0, 255),
+                    2
+                )
+
+                print(
+                    "XGBoost error:",
+                    repr(e)
+                )
+
 
         else:
 
             cv.putText(
                 img,
                 "Running...",
-                (50, 80),
+                (50, 70),
                 cv.FONT_HERSHEY_SIMPLEX,
-                1.2,
+                1.0,
                 (0, 255, 0),
-                3
+                2
             )
+
+
+        # --------------------------------------------------
+        # SHOW CURRENT PREDICTION
+        # --------------------------------------------------
+
+        cv.putText(
+            img,
+            f"Prediction: {self.last_prediction}",
+            (50, 210),
+            cv.FONT_HERSHEY_SIMPLEX,
+            1.2,
+            (0, 255, 0),
+            3
+        )
 
 
         # --------------------------------------------------
