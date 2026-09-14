@@ -60,7 +60,7 @@ class LandmarkProcessor:
 
         img = frame.to_ndarray(format="bgr24")
 
-    # Run MediaPipe only every 10th frame
+        # Run MediaPipe + prediction only every 10th frame
         if self.frame_count % 10 == 0:
 
             rgb_frame = cv.cvtColor(img, cv.COLOR_BGR2RGB)
@@ -77,28 +77,113 @@ class LandmarkProcessor:
                 self.timestamp_ms
             )
 
-            cv.putText(
-                img,
-                "MEDIAPIPE OK",
-                (50, 80),
-                cv.FONT_HERSHEY_SIMPLEX,
-                2,
-                (0, 255, 0),
-                3
-            )
+            landmarkdata = []
 
-        else:
-            cv.putText(
-                img,
-                "WAITING",
-                (50, 80),
-                cv.FONT_HERSHEY_SIMPLEX,
-                2,
-                (0, 255, 0),
-                3
-            )
+        # -------------------------
+        # POSE - 33 landmarks
+        # -------------------------
+            if (
+                landmarker_result.pose_landmarks
+                and len(landmarker_result.pose_landmarks) > 0
+            ):
+                pose_points = (
+                    landmarker_result.pose_landmarks[0]
+                    if isinstance(landmarker_result.pose_landmarks[0], list)
+                    else landmarker_result.pose_landmarks
+                )
 
-        return av.VideoFrame.from_ndarray(img, format="bgr24")
+                for landmark in pose_points:
+                    landmarkdata.extend([
+                        landmark.x,
+                        landmark.y,
+                        landmark.z
+                    ])
+            else:
+                landmarkdata.extend([0.0] * (33 * 3))
+
+        # -------------------------
+        # LEFT HAND - 21 landmarks
+        # -------------------------
+            if (
+                landmarker_result.left_hand_landmarks
+                and len(landmarker_result.left_hand_landmarks) > 0
+            ):
+                left_hand_points = (
+                    landmarker_result.left_hand_landmarks[0]
+                    if isinstance(landmarker_result.left_hand_landmarks[0], list)
+                    else landmarker_result.left_hand_landmarks
+                )
+
+                for landmark in left_hand_points:
+                    landmarkdata.extend([
+                        landmark.x,
+                        landmark.y,
+                        landmark.z
+                    ])
+            else:
+                landmarkdata.extend([0.0] * (21 * 3))
+
+        # -------------------------
+        # RIGHT HAND - 21 landmarks
+        # -------------------------
+            if (
+                landmarker_result.right_hand_landmarks
+                and len(landmarker_result.right_hand_landmarks) > 0
+            ):
+                right_hand_points = (
+                    landmarker_result.right_hand_landmarks[0]
+                    if isinstance(landmarker_result.right_hand_landmarks[0], list)
+                    else landmarker_result.right_hand_landmarks
+                )
+
+                for landmark in right_hand_points:
+                    landmarkdata.extend([
+                        landmark.x,
+                        landmark.y,
+                        landmark.z
+                    ])
+            else:
+                landmarkdata.extend([0.0] * (21 * 3))
+
+        # -------------------------
+        # CHECK FEATURES
+        # -------------------------
+            if len(landmarkdata) == 225:
+
+                Image_frame_data = pd.DataFrame(
+                    [landmarkdata],
+                    columns=range(225)
+                )
+
+            # -------------------------
+            # PREDICTION
+            # -------------------------
+                result = Gesture_checker(Image_frame_data)
+
+            # IMPORTANT:
+            # Gesture_checker() may return
+            # "Hello", "Thank You", etc.
+            # rather than 0, 1, 2, 3.
+
+                self.last_prediction = str(result)
+
+    # -------------------------
+    # DRAW PREDICTION
+    # -------------------------
+        cv.putText(
+            img,
+            self.last_prediction,
+            (50, 80),
+            cv.FONT_HERSHEY_SIMPLEX,
+            1.5,
+            (0, 255, 0),
+            3
+        )
+
+        return av.VideoFrame.from_ndarray(
+            img,
+            format="bgr24"
+        )
 
 # 3. WebRTC Streamer Setup
 RTC_CONFIGURATION = RTCConfiguration(
