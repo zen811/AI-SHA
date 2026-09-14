@@ -1,14 +1,4 @@
 import sys
-
-def install_and_import(package):
-    try:
-        __import__(package)
-    except ImportError:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-
-for pkg in ["requests", "pandas","opencv-python","mediapipe","xgboost","scikit_learn"]:
-    install_and_import(pkg) 
-    
 import time
 import pickle
 import cv2 as cv
