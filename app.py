@@ -100,10 +100,7 @@ class LandmarkProcessor:
                 landmarkdata.extend([0.0] * (33 * 3))
 
         # LEFT HAND
-            if (
-                landmarker_result.left_hand_landmarks
-                and len(landmarker_result.left_hand_landmarks) > 0
-            :
+            if landmarker_result.left_hand_landmarks and len(landmarker_result.left_hand_landmarks) > 0:
                 left_hand_points = (
                     landmarker_result.left_hand_landmarks[0]
                     if isinstance(landmarker_result.left_hand_landmarks[0], list)
