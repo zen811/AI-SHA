@@ -1,7 +1,7 @@
 import sys
 import time
 import pickle
-#import pyttsx3
+import pyttsx3
 import cv2 as cv
 import subprocess
 import pandas as pd
@@ -10,7 +10,7 @@ from mediapipe.tasks.python import vision
 from mediapipe.tasks.python import vision
 from mediapipe.tasks.python.vision import drawing_utils
 
-#engine = pyttsx3.init()
+# engine = pyttsx3.init()
 
 
 BaseOptions = mp.tasks.BaseOptions
@@ -42,6 +42,10 @@ with open('./Gesture_model.pkl', 'rb') as file:
 xgb_classifier = model_pack['model']
 scalar = model_pack['scaler']
 label_enc = model_pack['label_encoder']
+
+# def speak(text):
+#     engine.say(text)
+#     engine.runAndWait()
 
 def Gesture_checker(raw_data):
     
@@ -121,24 +125,29 @@ with HolisticLandmarker.create_from_options(options) as landmarker:
         
         Image_frame_data = pd.DataFrame([landmarkdata],columns=range(225))
         result = Gesture_checker(Image_frame_data)
-
+        text_res_prev = ""
 
         if result==0:
             text_res="Hello"
         if result==1:
             text_res="Thank You"
-        if result==2:
-            text_res="Sorry"
-        if result ==3:
-            text_res="Bye"
+        # if result==2:
+        #     text_res="Sorry"
+        # if result ==3:
+        #     text_res="Bye"
 
         cv.putText(frame, str(text_res), (50, 80),
            cv.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 3)
 
-        #engine.say(text_res)
-        #engine.runAndWait()
+        # if text_res != text_res_prev:
+        #     threading.Thread(
+        #     target=speak,
+        #     args=(text_res,),
+        #     daemon=True
+        # ).start()
         cv.imshow('MediaPipe Tasks Tracking', frame)
         print(text_res)
+        text_res_prev = text_res
 
         if cv.waitKey(1) & 0xFF == ord('q'):
             break
