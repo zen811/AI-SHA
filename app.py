@@ -75,19 +75,14 @@ label_enc = model_pack["label_encoder"]
 # XGBOOST COMPATIBILITY FIX
 # ============================================================
 
-# The XGBClassifier inside the pickle appears to have been
-# created with an older XGBoost configuration.
-#
-# We explicitly restore legacy attributes that may be expected
-# internally by the sklearn wrapper.
-
 try:
 
-    # Legacy label encoder attribute
+    # Old XGBoost attributes
     xgb_classifier.use_label_encoder = False
 
-    # Legacy GPU attribute
     xgb_classifier.gpu_id = -1
+
+    xgb_classifier.predictor = "auto"
 
 except Exception as e:
 
@@ -128,6 +123,13 @@ class LandmarkProcessor:
             hasattr(
                 xgb_classifier,
                 "gpu_id"
+            )
+        )
+
+        self.predictor_attribute_status = (
+            hasattr(
+                xgb_classifier,
+                "predictor"
             )
         )
 
@@ -364,11 +366,11 @@ class LandmarkProcessor:
                     "XGBoost attribute check"
                 )
 
-                # Make absolutely sure the legacy attributes
-                # exist before predict() is called.
+                # Force all known legacy attributes.
 
                 xgb_classifier.use_label_encoder = False
                 xgb_classifier.gpu_id = -1
+                xgb_classifier.predictor = "auto"
 
 
                 self.xgb_attribute_status = (
@@ -382,6 +384,13 @@ class LandmarkProcessor:
                     hasattr(
                         xgb_classifier,
                         "gpu_id"
+                    )
+                )
+
+                self.predictor_attribute_status = (
+                    hasattr(
+                        xgb_classifier,
+                        "predictor"
                     )
                 )
 
@@ -498,6 +507,15 @@ class LandmarkProcessor:
                 )
 
                 print(
+                    "predictor exists:",
+                    hasattr(
+                        xgb_classifier,
+                        "predictor"
+                    ),
+                    flush=True
+                )
+
+                print(
                     "================================\n",
                     flush=True
                 )
@@ -599,6 +617,17 @@ class LandmarkProcessor:
                 2
             )
 
+            cv.putText(
+                img,
+                f"predictor: "
+                f"{self.predictor_attribute_status}",
+                (30, 230),
+                cv.FONT_HERSHEY_SIMPLEX,
+                0.55,
+                (0, 0, 255),
+                2
+            )
+
 
         # ====================================================
         # PREDICTION DISPLAY
@@ -607,7 +636,7 @@ class LandmarkProcessor:
         cv.putText(
             img,
             f"Prediction: {self.last_prediction}",
-            (30, 250),
+            (30, 275),
             cv.FONT_HERSHEY_SIMPLEX,
             1.0,
             (0, 255, 0),
