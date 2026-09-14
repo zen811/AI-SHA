@@ -52,8 +52,17 @@ class LandmarkProcessor:
     def __init__(self):
         self.landmarker = mp.tasks.vision.HolisticLandmarker.create_from_options(options)
         self.timestamp_ms = 0
+        self.frame_count = 0
+        self.last_result = "Unknown"
 
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
+        self.frame_count += 1
+
+        img = frame.to_ndarray(format="bgr24")
+
+                # Only run MediaPipe on every 3rd frame
+        if self.frame_count % 3 != 0:
+            return av.VideoFrame.from_ndarray(img, format="bgr24")
         img = frame.to_ndarray(format="bgr24")
 
         rgb_frame = cv.cvtColor(img, cv.COLOR_BGR2RGB)
