@@ -75,21 +75,24 @@ label_enc = model_pack["label_encoder"]
 # XGBOOST COMPATIBILITY FIX
 # ============================================================
 
-# IMPORTANT:
-# The saved XGBClassifier was created with a version/configuration
-# that expects the use_label_encoder attribute.
+# The XGBClassifier inside the pickle appears to have been
+# created with an older XGBoost configuration.
 #
-# We explicitly add the attribute to the loaded object.
-# We do NOT use set_params() here.
+# We explicitly restore legacy attributes that may be expected
+# internally by the sklearn wrapper.
 
 try:
 
+    # Legacy label encoder attribute
     xgb_classifier.use_label_encoder = False
+
+    # Legacy GPU attribute
+    xgb_classifier.gpu_id = -1
 
 except Exception as e:
 
     st.error(
-        f"Could not add XGBoost compatibility attribute: {e}"
+        f"Could not add XGBoost compatibility attributes: {e}"
     )
 
 
@@ -118,6 +121,13 @@ class LandmarkProcessor:
             hasattr(
                 xgb_classifier,
                 "use_label_encoder"
+            )
+        )
+
+        self.gpu_attribute_status = (
+            hasattr(
+                xgb_classifier,
+                "gpu_id"
             )
         )
 
@@ -347,28 +357,31 @@ class LandmarkProcessor:
 
 
                 # =================================================
-                # CHECK XGBOOST ATTRIBUTE
+                # XGBOOST ATTRIBUTE CHECK
                 # =================================================
 
                 self.error_stage = (
                     "XGBoost attribute check"
                 )
 
-                if not hasattr(
-                    xgb_classifier,
-                    "use_label_encoder"
-                ):
+                # Make absolutely sure the legacy attributes
+                # exist before predict() is called.
 
-                    # Force it again in case the loaded
-                    # object does something unusual.
-
-                    xgb_classifier.use_label_encoder = False
+                xgb_classifier.use_label_encoder = False
+                xgb_classifier.gpu_id = -1
 
 
                 self.xgb_attribute_status = (
                     hasattr(
                         xgb_classifier,
                         "use_label_encoder"
+                    )
+                )
+
+                self.gpu_attribute_status = (
+                    hasattr(
+                        xgb_classifier,
+                        "gpu_id"
                     )
                 )
 
@@ -429,7 +442,6 @@ class LandmarkProcessor:
                     f"{error_type}: {error_message}"
                 )
 
-
                 self.last_prediction = (
                     "XGBoost ERROR"
                 )
@@ -477,6 +489,15 @@ class LandmarkProcessor:
                 )
 
                 print(
+                    "gpu_id exists:",
+                    hasattr(
+                        xgb_classifier,
+                        "gpu_id"
+                    ),
+                    flush=True
+                )
+
+                print(
                     "================================\n",
                     flush=True
                 )
@@ -500,7 +521,7 @@ class LandmarkProcessor:
 
             cv.putText(
                 img,
-                "XGBoost attribute: OK",
+                "XGBoost attributes: OK",
                 (30, 100),
                 cv.FONT_HERSHEY_SIMPLEX,
                 0.65,
@@ -536,7 +557,7 @@ class LandmarkProcessor:
 
 
             # -------------------------------------------------
-            # ERROR LINE 1
+            # ERROR LINE
             # -------------------------------------------------
 
             error_line = self.last_error[:90]
@@ -558,9 +579,20 @@ class LandmarkProcessor:
 
             cv.putText(
                 img,
-                f"use_label_encoder exists: "
+                f"use_label_encoder: "
                 f"{self.xgb_attribute_status}",
                 (30, 180),
+                cv.FONT_HERSHEY_SIMPLEX,
+                0.55,
+                (0, 0, 255),
+                2
+            )
+
+            cv.putText(
+                img,
+                f"gpu_id: "
+                f"{self.gpu_attribute_status}",
+                (30, 205),
                 cv.FONT_HERSHEY_SIMPLEX,
                 0.55,
                 (0, 0, 255),
@@ -575,7 +607,7 @@ class LandmarkProcessor:
         cv.putText(
             img,
             f"Prediction: {self.last_prediction}",
-            (30, 230),
+            (30, 250),
             cv.FONT_HERSHEY_SIMPLEX,
             1.0,
             (0, 255, 0),
