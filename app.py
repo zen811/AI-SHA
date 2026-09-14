@@ -411,17 +411,32 @@ class LandmarkProcessor:
 
 
                 # =================================================
-                # LABEL DECODING
+                # GESTURE WORD MAPPING
                 # =================================================
 
                 self.error_stage = (
-                    "Label decoding"
+                    "Gesture word mapping"
                 )
 
-                text_prediction = (
-                    label_enc.inverse_transform(
-                        numeric_prediction
-                    )
+                numeric_prediction = int(
+                    numeric_prediction[0]
+                )
+
+                gesture_words = {
+
+                    0: "Hello",
+
+                    1: "Thank You",
+
+                    2: "Sorry",
+
+                    3: "Bye",
+
+                }
+
+                text_prediction = gesture_words.get(
+                    numeric_prediction,
+                    "Unknown"
                 )
 
 
@@ -429,11 +444,12 @@ class LandmarkProcessor:
                 # SUCCESS
                 # =================================================
 
-                self.last_prediction = str(
-                    text_prediction[0]
+                self.last_prediction = (
+                    text_prediction
                 )
 
                 self.last_error = ""
+
                 self.error_stage = ""
 
 
