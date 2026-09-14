@@ -1,7 +1,7 @@
 import sys
 import time
 import pickle
-import pyttsx3
+#import pyttsx3
 import cv2 as cv
 import subprocess
 import pandas as pd
@@ -10,7 +10,7 @@ from mediapipe.tasks.python import vision
 from mediapipe.tasks.python import vision
 from mediapipe.tasks.python.vision import drawing_utils
 
-engine = pyttsx3.init()
+#engine = pyttsx3.init()
 
 
 BaseOptions = mp.tasks.BaseOptions
@@ -135,8 +135,8 @@ with HolisticLandmarker.create_from_options(options) as landmarker:
         cv.putText(frame, str(text_res), (50, 80),
            cv.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 3)
 
-        engine.say(text_res)
-        engine.runAndWait()
+        #engine.say(text_res)
+        #engine.runAndWait()
         cv.imshow('MediaPipe Tasks Tracking', frame)
         print(text_res)
 
