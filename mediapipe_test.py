@@ -1,11 +1,11 @@
 import sys
 import time
 import pickle
-import pyttsx3
 import cv2 as cv
 import subprocess
 import pandas as pd
 import mediapipe as mp
+import pyttsx3
 from mediapipe.tasks.python import vision
 from mediapipe.tasks.python import vision
 from mediapipe.tasks.python.vision import drawing_utils
