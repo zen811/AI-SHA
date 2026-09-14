@@ -1,7 +1,7 @@
 import time
 import pickle
 import av
-import cv2 as cv
+import cv2.headless as cv
 import pandas as pd
 import mediapipe as mp
 import streamlit as st
