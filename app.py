@@ -55,55 +55,6 @@ class LandmarkProcessor:
 
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
         img = frame.to_ndarray(format="bgr24")
-        rgb_frame = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
-        self.timestamp_ms += 33
-        frame_timestamp_ms = self.timestamp_ms
-
-        landmarker_result = self.landmarker.detect_for_video(mp_image, frame_timestamp_ms)
-        landmarkdata = []
-
-        # Extract Pose
-        if landmarker_result.pose_landmarks and len(landmarker_result.pose_landmarks) > 0:
-            pose_points = landmarker_result.pose_landmarks[0] if isinstance(landmarker_result.pose_landmarks[0], list) else landmarker_result.pose_landmarks
-            for landmark in pose_points:
-                landmarkdata.extend([landmark.x, landmark.y, landmark.z])
-        else:
-            landmarkdata.extend([0.0] * (33 * 3))
-
-        # Extract Left Hand
-        if landmarker_result.left_hand_landmarks and len(landmarker_result.left_hand_landmarks) > 0:
-            left_hand_points = landmarker_result.left_hand_landmarks[0] if isinstance(landmarker_result.left_hand_landmarks[0], list) else landmarker_result.left_hand_landmarks
-            for landmark in left_hand_points:
-                landmarkdata.extend([landmark.x, landmark.y, landmark.z])
-        else:
-            landmarkdata.extend([0.0] * (21 * 3))
-
-        # Extract Right Hand
-        if landmarker_result.right_hand_landmarks and len(landmarker_result.right_hand_landmarks) > 0:
-            right_hand_points = landmarker_result.right_hand_landmarks[0] if isinstance(landmarker_result.right_hand_landmarks[0], list) else landmarker_result.right_hand_landmarks
-            for landmark in right_hand_points:
-                landmarkdata.extend([landmark.x, landmark.y, landmark.z])
-        else:
-            landmarkdata.extend([0.0] * (21 * 3))
-
-        # Prediction
-        Image_frame_data = pd.DataFrame([landmarkdata], columns=range(225))
-        result = Gesture_checker(Image_frame_data)
-
-        text_res = "Unknown"
-        if result == 0:
-            text_res = "Hello"
-        elif result == 1:
-            text_res = "Thank You"
-        elif result == 2:
-            text_res = "Sorry"
-        elif result == 3:
-            text_res = "Bye"
-
-        # Draw Output on Frame
-        cv.putText(img, str(text_res), (50, 80), cv.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 3)
-
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
 # 3. WebRTC Streamer Setup
