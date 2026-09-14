@@ -50,45 +50,130 @@ def Gesture_checker(raw_data):
 # 2. WebRTC Video Processor Class
 class LandmarkProcessor:
     def __init__(self):
+        def __init__(self):
         self.landmarker = mp.tasks.vision.HolisticLandmarker.create_from_options(options)
         self.timestamp_ms = 0
         self.frame_count = 0
         self.last_prediction = "Unknown"
-        self.last_result = None
 
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
         self.frame_count += 1
 
         img = frame.to_ndarray(format="bgr24")
-        self.frame_count += 1
 
+            # Only run MediaPipe every 3rd frame
         if self.frame_count % 3 == 0:
-                # Only run MediaPipe on every 3rd frame
-            if self.frame_count % 3 != 0:
-                return av.VideoFrame.from_ndarray(img, format="bgr24")
-            img = frame.to_ndarray(format="bgr24")
 
             rgb_frame = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+
             mp_image = mp.Image(
                 image_format=mp.ImageFormat.SRGB,
                 data=rgb_frame
-                )
+            )
 
             self.timestamp_ms += 33
 
             landmarker_result = self.landmarker.detect_for_video(
-            mp_image,
-            self.timestamp_ms
-        )
+                mp_image,
+                self.timestamp_ms
+            )
+
+            landmarkdata = []
+
+            # POSE
+            if (
+                landmarker_result.pose_landmarks
+                and len(landmarker_result.pose_landmarks) > 0
+            ):
+                pose_points = (
+                    landmarker_result.pose_landmarks[0]
+                    if isinstance(landmarker_result.pose_landmarks[0], list)
+                    else landmarker_result.pose_landmarks
+                )
+
+                for landmark in pose_points:
+                    andmarkdata.extend([
+                        landmark.x,
+                        landmark.y,
+                        landmark.z
+                    ])
+            else:
+                landmarkdata.extend([0.0] * (33 * 3))
+
+        # LEFT HAND
+            if (
+                landmarker_result.left_hand_landmarks
+                and len(landmarker_result.left_hand_landmarks) > 0
+            :
+                left_hand_points = (
+                    landmarker_result.left_hand_landmarks[0]
+                    if isinstance(landmarker_result.left_hand_landmarks[0], list)
+                    else landmarker_result.left_hand_landmarks
+            )   
+
+                for landmark in left_hand_points:
+                    landmarkdata.extend([
+                        landmark.x,
+                        landmark.y,
+                        landmark.z
+                    ])
+            else:
+                landmarkdata.extend([0.0] * (21 * 3))
+
+            # RIGHT HAND
+            if (
+                landmarker_result.right_hand_landmarks
+                and len(landmarker_result.right_hand_landmarks) > 0
+            ):
+                right_hand_points = (
+                    landmarker_result.right_hand_landmarks[0]
+                    if isinstance(landmarker_result.right_hand_landmarks[0], list)
+                    else landmarker_result.right_hand_landmarks
+                )
+
+                for landmark in right_hand_points:
+                    landmarkdata.extend([
+                        landmark.x,
+                        landmark.y,
+                        landmark.z
+                    ])
+            else:
+                landmarkdata.extend([0.0] * (21 * 3))
+
+            # Make sure we still have 225 features
+            Image_frame_data = pd.DataFrame(
+                [landmarkdata],
+                columns=range(225)
+            )
+
+            # Gesture prediction
+            result = Gesture_checker(Image_frame_data)
+
+            text_res = "Unknown"
+
+            if result == 0:
+                text_res = "Hello"
+            elif result == 1:
+                text_res = "Thank You"
+            elif result == 2:
+                text_res = "Sorry"
+            elif result == 3:
+                text_res = "Bye"
+
+            # Save the latest prediction
+            self.last_prediction = text_res
+
+        # Draw the latest prediction on EVERY frame
         cv.putText(
-        img,
-        str(self.last_prediction),
-        (50, 80),
-        cv.FONT_HERSHEY_SIMPLEX,
-        2,
-        (0, 255, 0),
-        3
+            img,
+            str(self.last_prediction),
+            (50, 80),
+            cv.FONT_HERSHEY_SIMPLEX,
+            2,
+            (0, 255, 0),
+            3
         )
+
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
 # 3. WebRTC Streamer Setup
@@ -102,5 +187,5 @@ webrtc_streamer(
     rtc_configuration=RTC_CONFIGURATION,
     video_processor_factory=LandmarkProcessor,
     media_stream_constraints={"video": True, "audio": False},
-    async_processing=False,
+    async_processing=True,
 )
