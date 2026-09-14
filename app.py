@@ -53,32 +53,44 @@ class LandmarkProcessor:
         self.landmarker = mp.tasks.vision.HolisticLandmarker.create_from_options(options)
         self.timestamp_ms = 0
         self.frame_count = 0
-        self.last_result = "Unknown"
+        self.last_prediction = "Unknown"
+        self.last_result = None
 
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
         self.frame_count += 1
 
         img = frame.to_ndarray(format="bgr24")
+        self.frame_count += 1
 
+        if self.frame_count % 3 == 0:
                 # Only run MediaPipe on every 3rd frame
-        if self.frame_count % 3 != 0:
-            return av.VideoFrame.from_ndarray(img, format="bgr24")
-        img = frame.to_ndarray(format="bgr24")
+            if self.frame_count % 3 != 0:
+                return av.VideoFrame.from_ndarray(img, format="bgr24")
+            img = frame.to_ndarray(format="bgr24")
 
-        rgb_frame = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-        mp_image = mp.Image(
-            image_format=mp.ImageFormat.SRGB,
-            data=rgb_frame
-        )
+            rgb_frame = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+            mp_image = mp.Image(
+                image_format=mp.ImageFormat.SRGB,
+                data=rgb_frame
+                )
 
-        self.timestamp_ms += 33
+            self.timestamp_ms += 33
 
-        landmarker_result = self.landmarker.detect_for_video(
+            landmarker_result = self.landmarker.detect_for_video(
             mp_image,
-         self.timestamp_ms
-      )
-
+            self.timestamp_ms
+        )
+        cv.putText(
+        img,
+        str(self.last_prediction),
+        (50, 80),
+        cv.FONT_HERSHEY_SIMPLEX,
+        2,
+        (0, 255, 0),
+        3
+        )
         return av.VideoFrame.from_ndarray(img, format="bgr24")
+
 # 3. WebRTC Streamer Setup
 RTC_CONFIGURATION = RTCConfiguration(
     {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
