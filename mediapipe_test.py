@@ -1,13 +1,6 @@
 import sys
 
-def install_and_import(package):
-    try:
-        __import__(package)
-    except ImportError:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
 
-for pkg in ["requests", "pandas","opencv-python","mediapipe","xgboost","scikit_learn"]:
-    install_and_import(pkg) 
     
 import time
 import pickle
@@ -20,8 +13,7 @@ from mediapipe.tasks.python import vision
 from mediapipe.tasks.python.vision import drawing_utils
 
 
-for pkg in ["requests", "pandas","opencv-python","mediapipe","xgboost","scikit_learn"]:
-    install_and_import(pkg)
+
 
 
 BaseOptions = mp.tasks.BaseOptions
@@ -139,12 +131,12 @@ with HolisticLandmarker.create_from_options(options) as landmarker:
         if result==1:
             text_res="Thank You"
         if result==2:
-            text_res="Bye"
-        if result ==3:
             text_res="Sorry"
+        if result ==3:
+            text_res="Bye"
 
         cv.imshow('MediaPipe Tasks Tracking', frame)
-        cv.putText(frame,str(text_res),(100,100),cv.FONT_HERSHEY_SIMPLEX,1,(0, 225, 0),2)
+        cv.putText(frame,str(text_res),(0,0),cv.FONT_HERSHEY_SIMPLEX,5,(0, 225, 0),2)
         print(text_res)
 
         if cv.waitKey(1) & 0xFF == ord('q'):
