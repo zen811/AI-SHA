@@ -5,4 +5,4 @@ pandas
 mediapipe
 xgboost==1.7.6
 av
-scikit_learn
+scikit-learn
